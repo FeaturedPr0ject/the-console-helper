@@ -193,6 +193,7 @@
     const data=ctx.createImageData(width,height);
     for(let i=0;i<data.data.length;i+=4){data.data[i]=128;data.data[i+1]=128;data.data[i+2]=0;data.data[i+3]=255}
     const radius=Math.min(state.radius,height/2,width/2);
+    const maxDisplacement=Math.max(1,...precomputed.map(Math.abs));
     const radiusSquared=radius*radius;
     const plusSquared=(radius+1)*(radius+1);
     const innerSquared=Math.max(0,(radius-state.bezelWidth)*(radius-state.bezelWidth));
@@ -214,7 +215,6 @@
         const ratio=clamp(distFromSide/state.bezelWidth,0,1);
         const index=clamp(Math.floor(ratio*precomputed.length),0,precomputed.length-1);
         const displacement=precomputed[index]||0;
-        const maxDisplacement=Math.max(1,...precomputed.map(Math.abs));
         const dx=clamp((-((dist>0)?x/dist:0)*displacement/maxDisplacement),-1,1);
         const dy=clamp((-((dist>0)?y/dist:0)*displacement/maxDisplacement),-1,1);
         const offset=(py*width+px)*4;
