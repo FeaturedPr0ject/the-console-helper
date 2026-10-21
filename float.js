@@ -5,7 +5,7 @@
 
   const host = document.createElement("div");
   host.id = ID;
-  host.style.cssText = "all:initial;position:fixed;right:22px;top:22px;z-index:2147483647;pointer-events:none;max-width:calc(100vw - 16px);";
+  host.style.cssText = "all:initial;position:fixed;right:22px;top:22px;z-index:2147483647;display:block;width:max-content;height:max-content;max-width:calc(100vw - 16px);pointer-events:none;";
   const shadow = host.attachShadow({mode:"open"});
   document.documentElement.appendChild(host);
 
