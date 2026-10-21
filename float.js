@@ -96,6 +96,7 @@
   const root = $("lg-root");
   const backdrop = $("lg-backdrop");
 
+  let nativeSupport = false;
   const state = {
     surfaceType:"convex_squircle",
     bezelWidth:10,
@@ -212,20 +213,21 @@
       const d=$("cg-main-displacement-image"),s=$("cg-main-specular-image");
       d.setAttribute("href",makeDataURL(disp.image));
       s.setAttribute("href",makeDataURL(spec.image));
-      d.setAttribute("width",String(disp.w));d.setAttribute("height",String(disp.h));
-      s.setAttribute("width",String(spec.w));s.setAttribute("height",String(spec.h));
-      $("cg-displacement-filter").setAttribute("scale",String(Math.max(...profile.map(Math.abs))*state.refractionScale));
+      d.setAttribute("width",String(width));d.setAttribute("height",String(height));
+      s.setAttribute("width",String(width));s.setAttribute("height",String(height));
+      $("cg-main-displacement").setAttribute("scale",String(Math.max(...profile.map(Math.abs))*state.refractionScale));
       $("cg-main-blur").setAttribute("stdDeviation",String(state.blur));
       $("cg-main-specular-alpha").setAttribute("slope",String(state.specular?state.specularOpacity:0));
       const capsule=makeDisplacementMap(160,56,profile,true);
       const capsuleSpec=makeSpecularMap(160,56);
       $("cg-control-displacement-image").setAttribute("href",makeDataURL(capsule.image));
       $("cg-control-specular-image").setAttribute("href",makeDataURL(capsuleSpec.image));
-      $("cg-control-displacement-image").setAttribute("width",String(capsule.w));$("cg-control-displacement-image").setAttribute("height",String(capsule.h));
-      $("cg-control-specular-image").setAttribute("width",String(capsuleSpec.w));$("cg-control-specular-image").setAttribute("height",String(capsuleSpec.h));
+      $("cg-control-displacement-image").setAttribute("width","160");$("cg-control-displacement-image").setAttribute("height","56");
+      $("cg-control-specular-image").setAttribute("width","160");$("cg-control-specular-image").setAttribute("height","56");
       $("cg-control-liquid-filter").setAttribute("color-interpolation-filters","sRGB");
-      $("cg-status-text").textContent=state.liquid?(nativeSupport?"SVG liquid glass enabled":"CSS glass fallback"):"Liquid effect off";
-      $("cg-render-status").textContent=nativeSupport
+      $("cg-control-displacement").setAttribute("scale",String(Math.min(28,Math.max(...profile.map(Math.abs))*state.refractionScale*.24)));
+      $("lg-status-text").textContent=state.liquid?(nativeSupport?"SVG liquid glass enabled":"CSS glass fallback"):"Liquid effect off";
+      $("lg-render-status").textContent=nativeSupport
         ?(state.liquid?"SVG refraction filter enabled for the floating surface. Glass buttons and switch thumbs use their own glass styling.":"Liquid refraction is switched off; the CSS glass material remains visible.")
         :"This Chrome build does not expose SVG backdrop-filter. The UI uses the demo-inspired CSS glass fallback; the renderer settings remain available.";
       updateAppearance();
@@ -267,9 +269,9 @@
       renderGlass(true);
     });
   });
-  $("cg-fallback-blur").addEventListener("input",()=>{state.uiBlur=Number($("cg-fallback-blur").value);displayValue("cg-fallback-blur"," px",0);updateAppearance();});
-  $("cg-opacity").addEventListener("input",()=>{state.opacity=Number($("cg-opacity").value);displayValue("cg-opacity","%",0);updateAppearance();});
-  $("cg-radius").addEventListener("input",()=>{state.radius=Number($("cg-radius").value);displayValue("cg-radius"," px",0);renderGlass(true);});
+  $("lg-fallback-blur").addEventListener("input",()=>{state.uiBlur=Number($("lg-fallback-blur").value);displayValue("cg-fallback-blur"," px",0);updateAppearance();});
+  $("lg-opacity").addEventListener("input",()=>{state.opacity=Number($("lg-opacity").value);displayValue("cg-opacity","%",0);updateAppearance();});
+  $("lg-radius").addEventListener("input",()=>{state.radius=Number($("lg-radius").value);displayValue("cg-radius"," px",0);renderGlass(true);});
 
   function setSwitch(id,on) {
     const el=$(id);
@@ -283,9 +285,12 @@
   [["lg-toggle-liquid",true],["lg-toggle-specular",true],["lg-toggle-controls",true]].forEach(([id,defaultValue])=>{
     setSwitch(id,defaultValue);
     const el=$(id);
-    el.addEventListener("click",()=>setSwitch(id,el.getAttribute("aria-checked")!=="true"));
-    let startX=0,moved=false;
+    let startX=0,moved=false,skipClick=false;
     const thumb=el.querySelector(".lg-switch-thumb");
+    el.addEventListener("click",e=>{
+      if(skipClick){skipClick=false;e.preventDefault();return;}
+      setSwitch(id,el.getAttribute("aria-checked")!=="true");
+    });
     thumb.addEventListener("pointerdown",e=>{startX=e.clientX;moved=false;thumb.setPointerCapture(e.pointerId);});
     thumb.addEventListener("pointermove",e=>{if(Math.abs(e.clientX-startX)>3)moved=true;});
     thumb.addEventListener("pointerup",e=>{
@@ -293,7 +298,7 @@
       e.preventDefault();
       const r=el.getBoundingClientRect();
       setSwitch(id,e.clientX>r.left+r.width/2);
-      el.dataset.dragCompleted="1";
+      skipClick=true;
     });
   });
 
@@ -361,7 +366,7 @@
 
   const probe=document.createElement("div");
   probe.style.backdropFilter="url(#cg-liquid-filter)";
-  const nativeSupport=!!window.chrome&&probe.style.backdropFilter.includes("url");
+  nativeSupport=!!window.chrome&&probe.style.backdropFilter.includes("url");
   let observer;
   themeDefaults();
   function themeDefaults(){setTheme("dark");}
