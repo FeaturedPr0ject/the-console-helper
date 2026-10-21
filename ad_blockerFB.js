@@ -196,6 +196,17 @@
     if (!card || !(card instanceof Element)) return null;
     if (card.id === UI_ID || card.contains(uiHost) || uiHost.contains(card)) return null;
 
+    const adAboutLink = card.querySelector('a[href*="/ads/about/"]');
+    if (adAboutLink) return "sponsored";
+
+    const labelledElements = card.querySelectorAll("[aria-label]");
+    for (const element of labelledElements) {
+      const label = normalizeText(element.getAttribute("aria-label"));
+      if (/sponsored content|paid partnership|why am i seeing this ad|ve sao toi thay quang cao/.test(label)) {
+        return "sponsored";
+      }
+    }
+
     const strongAdSignal = hasStrongAdSignal(card);
     const elements = [card, ...card.querySelectorAll(LABEL_SELECTOR)];
     for (const element of elements) {
@@ -207,7 +218,7 @@
       for (const value of values) {
         const reason = classifyText(value);
         if (reason === "sponsored" || reason === "suggested") return reason;
-        if (reason === "ad-label" && (strongAdSignal || element.tagName === "USE" || element.hasAttribute("aria-label"))) {
+        if (reason === "ad-label" && (strongAdSignal || element.tagName === "USE" || normalizeText(element.getAttribute("aria-label")) === "ad")) {
           return "sponsored";
         }
       }
