@@ -2,6 +2,7 @@
   const ID = "coneui-liquid-glass-float";
   const CSS_URL = "https://raw.githubusercontent.com/FeaturedPr0ject/the-console-helper/main/float.css";
   document.getElementById(ID)?.remove();
+  document.getElementById("coneui-liquid-glass-filter-host")?.remove();
 
   const host = document.createElement("div");
   host.id = ID;
@@ -24,11 +25,11 @@
   style.textContent = cssText;
   shadow.appendChild(style);
 
-  const markup = [
-    '<section class="lg-root" id="lg-root">',
-    '<div class="lg-backdrop" id="lg-backdrop"></div>',
-    '<svg class="lg-filter-defs" aria-hidden="true">',
-    '<defs>',
+  const filterHost = document.createElement("div");
+  filterHost.id = "coneui-liquid-glass-filter-host";
+  filterHost.style.cssText = "position:fixed;left:0;top:0;width:0;height:0;overflow:hidden;pointer-events:none;z-index:-1;";
+  filterHost.innerHTML = [
+    '<svg aria-hidden="true" width="0" height="0"><defs>',
     '<filter id="cg-liquid-filter" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">',
     '<feGaussianBlur id="cg-main-blur" in="SourceGraphic" stdDeviation=".5" result="mainBlur"/>',
     '<feImage id="cg-main-map" href="" x="0" y="0" width="430" height="620" result="mainMap" preserveAspectRatio="none"/>',
@@ -40,10 +41,10 @@
     '</filter>',
     '<filter id="cg-control-liquid-filter" x="-24%" y="-28%" width="148%" height="156%" color-interpolation-filters="sRGB">',
     '<feGaussianBlur in="SourceGraphic" stdDeviation=".3" result="controlBlur"/>',
-    '<feImage id="cg-control-map" href="" x="0" y="0" width="160" height="56" result="controlMap" preserveAspectRatio="none"/>',
+    '<feImage id="cg-control-map" href="" x="0" y="0" width="90" height="60" result="controlMap" preserveAspectRatio="none"/>',
     '<feDisplacementMap id="cg-control-displacement" in="controlBlur" in2="controlMap" scale="22" xChannelSelector="R" yChannelSelector="G" result="controlBent"/>',
     '<feColorMatrix in="controlBent" type="saturate" values="7" result="controlSaturated"/>',
-    '<feImage id="cg-control-shine" href="" x="0" y="0" width="160" height="56" result="controlShine" preserveAspectRatio="none"/>',
+    '<feImage id="cg-control-shine" href="" x="0" y="0" width="90" height="60" result="controlShine" preserveAspectRatio="none"/>',
     '<feComponentTransfer in="controlShine" result="controlShineAlpha"><feFuncA id="cg-control-shine-alpha" type="linear" slope=".8"/></feComponentTransfer>',
     '<feBlend in="controlShineAlpha" in2="controlSaturated" mode="screen"/>',
     '</filter>',
@@ -56,7 +57,14 @@
     '<feComponentTransfer in="switchShine" result="switchShineFaded"><feFuncA id="cg-switch-shine-alpha" type="linear" slope=".5"/></feComponentTransfer>',
     '<feBlend in="switchShineFaded" in2="switchSaturated" mode="screen"/>',
     '</filter>',
-    '</defs></svg>',
+    '</defs></svg>'
+  ].join("");
+  document.documentElement.appendChild(filterHost);
+
+  const markup = [
+    '<section class="lg-root" id="lg-root">',
+    '<div class="lg-backdrop" id="lg-backdrop"></div>',
+
     '<div class="lg-content" id="lg-content">',
     '<header class="lg-header" id="lg-drag"><div class="lg-brand-mark">◈</div><div class="lg-heading"><div class="lg-title">ConeUI Liquid Glass</div><div class="lg-subtitle">Material · Refraction · Controls</div></div><div class="lg-spacer"></div><button class="lg-glass-control lg-icon-button" id="lg-min" title="Minimize" aria-label="Minimize"><span>−</span></button><button class="lg-glass-control lg-icon-button" id="lg-close" title="Close" aria-label="Close"><span>×</span></button></header>',
     '<nav class="lg-tabs" id="lg-tabs"><button class="lg-glass-control lg-tab active" data-page="material"><span>Material</span></button><button class="lg-glass-control lg-tab" data-page="appearance"><span>Appearance</span></button></nav>',
@@ -97,7 +105,7 @@
   const mount = document.createElement("div");
   mount.innerHTML = markup;
   shadow.appendChild(mount);
-  const $ = id => shadow.getElementById(id);
+  const $ = id => shadow.getElementById(id) || document.getElementById(id);
   const root = $("lg-root");
   const state = {
     surfaceType:"convex_squircle", bezelWidth:10, glassThickness:150,
@@ -635,7 +643,7 @@
     requestAnimationFrame(renderGlass);
   };
   let observer=null;
-  $("lg-close").onclick=()=>{if(observer)observer.disconnect();host.remove();};
+  $("lg-close").onclick=()=>{if(observer)observer.disconnect();host.remove();filterHost.remove();};
 
   function resetOptical(){
     const defaults={bezelWidth:10,glassThickness:150,refractiveIndex:1.5,refractionScale:1.5,specularOpacity:.7,blur:.5};
