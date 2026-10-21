@@ -180,12 +180,12 @@
     return {displacement:dc.toDataURL("image/png"),shine:sc.toDataURL("image/png"),width:w,height:h,maxDisplacement};
   }
 
-  function setMap(imageId,shineId,filterId,scaleId,maps,filterScale){
+  function setMap(imageId,shineId,scaleId,maps,filterScale,targetWidth,targetHeight){
     const image=$(imageId),shine=$(shineId);
     image.setAttribute("href",maps.displacement);
-    image.setAttribute("width",String(maps.width));image.setAttribute("height",String(maps.height));
+    image.setAttribute("width",String(targetWidth));image.setAttribute("height",String(targetHeight));
     shine.setAttribute("href",maps.shine);
-    shine.setAttribute("width",String(maps.width));shine.setAttribute("height",String(maps.height));
+    shine.setAttribute("width",String(targetWidth));shine.setAttribute("height",String(targetHeight));
     if(scaleId)$(scaleId).setAttribute("scale",String(filterScale));
   }
 
@@ -199,17 +199,17 @@
       const profile=displacementProfile();
       const main=makeMaps(width,height,profile,state.radius,state.bezelWidth,.36);
       const maxDisp=Math.max(...profile.map(Math.abs))*state.refractionScale;
-      setMap("cg-main-map","cg-main-specular","cg-liquid-filter","cg-main-displacement",main,maxDisp);
+      setMap("cg-main-map","cg-main-specular","cg-main-displacement",main,maxDisp,width,height);
       $("cg-main-blur").setAttribute("stdDeviation",String(state.blur));
       $("cg-main-specular-alpha").setAttribute("slope",String(state.specular?state.specularOpacity:0));
 
       const control=makeMaps(160,56,profile,28,Math.min(14,state.bezelWidth),.7);
-      setMap("cg-control-map","cg-control-shine","cg-control-liquid-filter","cg-control-displacement",control,Math.min(34,control.maxDisplacement*state.refractionScale*.22));
+      setMap("cg-control-map","cg-control-shine","cg-control-displacement",control,Math.min(34,control.maxDisplacement*state.refractionScale*.22),160,56);
       const sw=makeMaps(52,52,profile,26,Math.min(13,state.bezelWidth),.8);
       $("cg-switch-map").setAttribute("href",sw.displacement);
-      $("cg-switch-map").setAttribute("width",String(sw.width));$("cg-switch-map").setAttribute("height",String(sw.height));
+      $("cg-switch-map").setAttribute("width","52");$("cg-switch-map").setAttribute("height","52");
       $("cg-switch-shine").setAttribute("href",sw.shine);
-      $("cg-switch-shine").setAttribute("width",String(sw.width));$("cg-switch-shine").setAttribute("height",String(sw.height));
+      $("cg-switch-shine").setAttribute("width","52");$("cg-switch-shine").setAttribute("height","52");
       $("cg-switch-displacement").setAttribute("scale",String(Math.min(22,sw.maxDisplacement*state.refractionScale*.25)));
 
       root.classList.toggle("lg-native",nativeSupport&&state.liquid);
@@ -419,19 +419,6 @@
     renderGlass();
   });
 
-  function initialMaps(){
-    const profile=displacementProfile();
-    const control=makeMaps(160,56,profile,28,state.bezelWidth,.7);
-    $("cg-control-map").setAttribute("href",control.displacement);
-    $("cg-control-map").setAttribute("width",String(control.width));$("cg-control-map").setAttribute("height",String(control.height));
-    $("cg-control-shine").setAttribute("href",control.shine);
-    $("cg-control-shine").setAttribute("width",String(control.width));$("cg-control-shine").setAttribute("height",String(control.height));
-    const sw=makeMaps(52,52,profile,26,Math.min(13,state.bezelWidth),.8);
-    $("cg-switch-map").setAttribute("href",sw.displacement);$("cg-switch-map").setAttribute("width",String(sw.width));$("cg-switch-map").setAttribute("height",String(sw.height));
-    $("cg-switch-shine").setAttribute("href",sw.shine);$("cg-switch-shine").setAttribute("width",String(sw.width));$("cg-switch-shine").setAttribute("height",String(sw.height));
-  }
-
-  initialMaps();
   updateAppearance();
   renderGlass();
   console.info("ConeUI Liquid Glass loaded. Separate float.css; draggable liquid slider thumbs; glass buttons and draggable switches.");
