@@ -256,12 +256,12 @@
   }
 
   const controls=[
-    ["cg-bezel"," px",0,"bezelWidth"],
-    ["cg-thickness","",0,"glassThickness"],
-    ["cg-index","",2,"refractiveIndex"],
-    ["cg-refraction","",2,"refractionScale"],
-    ["cg-specular","",2,"specularOpacity"],
-    ["cg-optical-blur"," px",1,"blur"]
+    ["lg-bezel"," px",0,"bezelWidth"],
+    ["lg-thickness","",0,"glassThickness"],
+    ["lg-index","",2,"refractiveIndex"],
+    ["lg-refraction","",2,"refractionScale"],
+    ["lg-specular","",2,"specularOpacity"],
+    ["lg-optical-blur"," px",1,"blur"]
   ];
   controls.forEach(([id,suffix,digits,key])=>{
     $(id).addEventListener("input",()=>{
@@ -270,9 +270,9 @@
       renderGlass(true);
     });
   });
-  $("lg-fallback-blur").addEventListener("input",()=>{state.uiBlur=Number($("lg-fallback-blur").value);displayValue("cg-fallback-blur"," px",0);updateAppearance();});
-  $("lg-opacity").addEventListener("input",()=>{state.opacity=Number($("lg-opacity").value);displayValue("cg-opacity","%",0);updateAppearance();});
-  $("lg-radius").addEventListener("input",()=>{state.radius=Number($("lg-radius").value);displayValue("cg-radius"," px",0);renderGlass(true);});
+  $("lg-fallback-blur").addEventListener("input",()=>{state.uiBlur=Number($("lg-fallback-blur").value);displayValue("lg-fallback-blur"," px",0);updateAppearance();});
+  $("lg-opacity").addEventListener("input",()=>{state.opacity=Number($("lg-opacity").value);displayValue("lg-opacity","%",0);updateAppearance();});
+  $("lg-radius").addEventListener("input",()=>{state.radius=Number($("lg-radius").value);displayValue("lg-radius"," px",0);renderGlass(true);});
 
   function setSwitch(id,on) {
     const el=$(id);
@@ -303,8 +303,8 @@
     });
   });
 
-  host.querySelectorAll("[data-surface]").forEach(button=>button.addEventListener("click",()=>{
-    host.querySelectorAll("[data-surface]").forEach(item=>item.classList.toggle("active",item===button));
+  shadow.querySelectorAll("[data-surface]").forEach(button=>button.addEventListener("click",()=>{
+    shadow.querySelectorAll("[data-surface]").forEach(item=>item.classList.toggle("active",item===button));
     state.surfaceType=button.dataset.surface;
     renderGlass(true);
   }));
@@ -321,9 +321,9 @@
   function showPage(name) {
     $("lg-page-material").hidden=name!=="material";
     $("lg-page-appearance").hidden=name!=="appearance";
-    host.querySelectorAll("[data-page]").forEach(tab=>tab.classList.toggle("active",tab.dataset.page===name));
+    shadow.querySelectorAll("[data-page]").forEach(tab=>tab.classList.toggle("active",tab.dataset.page===name));
   }
-  host.querySelectorAll("[data-page]").forEach(tab=>tab.addEventListener("click",()=>showPage(tab.dataset.page)));
+  shadow.querySelectorAll("[data-page]").forEach(tab=>tab.addEventListener("click",()=>showPage(tab.dataset.page)));
 
   $("lg-min").onclick=()=>{
     const collapsed=root.classList.toggle("lg-collapsed");
@@ -333,10 +333,10 @@
   $("lg-close").onclick=()=>{observer.disconnect();host.remove();};
 
   function resetOptical() {
-    const defaults={"cg-bezel":10,"cg-thickness":150,"cg-index":1.5,"cg-refraction":1.5,"cg-specular":.7,"cg-optical-blur":.5};
+    const defaults={"lg-bezel":10,"lg-thickness":150,"lg-index":1.5,"lg-refraction":1.5,"lg-specular":.7,"lg-optical-blur":.5};
     controls.forEach(([id,suffix,digits,key])=>{$(id).value=defaults[id];state[key]=defaults[id];displayValue(id,suffix,digits);});
     state.surfaceType="convex_squircle";
-    host.querySelectorAll("[data-surface]").forEach(b=>b.classList.toggle("active",b.dataset.surface==="convex_squircle"));
+    shadow.querySelectorAll("[data-surface]").forEach(b=>b.classList.toggle("active",b.dataset.surface==="convex_squircle"));
     renderGlass(true);
   }
   $("lg-reset-optical").onclick=resetOptical;
