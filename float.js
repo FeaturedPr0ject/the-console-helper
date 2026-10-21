@@ -42,8 +42,8 @@
     '<feGaussianBlur in="SourceGraphic" stdDeviation=".25" result="controlBlur"/>',
     '<feImage id="cg-control-displacement-image" href="" x="0" y="0" width="160" height="56" result="controlMap" preserveAspectRatio="none"/>',
     '<feDisplacementMap id="cg-control-displacement" in="controlBlur" in2="controlMap" scale="22" xChannelSelector="R" yChannelSelector="G" result="controlBent"/>',
-    '<feImage id="cg-control-specular-image" href="" x="0" y="0" width="160" height="56" result="controlShine" preserveAspectRatio="none"/>',
-    '<feBlend in="controlShine" in2="controlBent" mode="screen"/>',
+    '<feImage id="cg-control-specular-image" href="" x="0" y="0" width="160" height="56" result="controlShine" preserveAspectRatio="none"/><feComponentTransfer in="controlShine" result="controlShineFaded"><feFuncA id="cg-control-specular-alpha" type="linear" slope=".72"/></feComponentTransfer>',
+    '<feBlend in="controlShineFaded" in2="controlBent" mode="screen"/>',
     '</filter></defs></svg>',
     '<div class="lg-content" id="lg-content">',
     '<header class="lg-header" id="lg-drag"><div class="lg-brand-mark">◈</div><div><div class="lg-title">ConeUI Liquid Glass</div><div class="lg-subtitle">Material system · CSS + SVG</div></div><div class="lg-spacer"></div><button class="lg-icon-button lg-glass-control" id="lg-min" title="Minimize" aria-label="Minimize">−</button><button class="lg-icon-button lg-glass-control" id="lg-close" title="Close" aria-label="Close">×</button></header>',
@@ -226,6 +226,7 @@
       $("cg-control-specular-image").setAttribute("width","160");$("cg-control-specular-image").setAttribute("height","56");
       $("cg-control-liquid-filter").setAttribute("color-interpolation-filters","sRGB");
       $("cg-control-displacement").setAttribute("scale",String(Math.min(28,Math.max(...profile.map(Math.abs))*state.refractionScale*.24)));
+      $("cg-control-specular-alpha").setAttribute("slope",String(state.specular?state.specularOpacity:0));
       $("lg-status-text").textContent=state.liquid?(nativeSupport?"SVG liquid glass enabled":"CSS glass fallback"):"Liquid effect off";
       $("lg-render-status").textContent=nativeSupport
         ?(state.liquid?"SVG refraction filter enabled for the floating surface. Glass buttons and switch thumbs use their own glass styling.":"Liquid refraction is switched off; the CSS glass material remains visible.")
@@ -363,6 +364,13 @@
   });
   $("lg-drag").addEventListener("pointerup",()=>dragging=false);
   $("lg-drag").addEventListener("pointercancel",()=>dragging=false);
+  window.addEventListener("resize",()=>{
+    if(!document.getElementById(ID))return;
+    const rect=host.getBoundingClientRect();
+    if(rect.right>innerWidth)host.style.left=Math.max(0,innerWidth-host.offsetWidth)+"px";
+    if(rect.bottom>innerHeight)host.style.top=Math.max(0,innerHeight-host.offsetHeight)+"px";
+    renderGlass(true);
+  });
 
   const probe=document.createElement("div");
   probe.style.backdropFilter="url(#cg-liquid-filter)";
