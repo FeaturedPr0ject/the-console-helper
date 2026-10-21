@@ -236,22 +236,28 @@
 
   function makeRenderMaps(config) {
     const surface = profiles[config.surfaceType];
-    const profile = calculateDisplacementMap1D(config.glassThickness, config.bezelWidth, surface, config.refractiveIndex);
+    const physicsBezelWidth = config.physicsBezelWidth ?? config.bezelWidth;
+    const profile = calculateDisplacementMap1D(config.glassThickness, physicsBezelWidth, surface, config.refractiveIndex);
     const maxDisplacement = Math.max(0, ...profile.map(Math.abs));
     const displacement = calculateDisplacementMap2D(config.width, config.height, config.width, config.height, config.radius, config.bezelWidth, maxDisplacement || 1, profile);
     const specular = calculateSpecularHighlight(config.width, config.height, config.radius, config.bezelWidth);
-    return { displacement, specular, profile, maxDisplacement, width: config.width, height: config.height };
+    return {
+      displacement, specular, profile, maxDisplacement,
+      width: config.width, height: config.height,
+      displayWidth: config.displayWidth ?? config.width,
+      displayHeight: config.displayHeight ?? config.height
+    };
   }
 
   function applyRenderMaps(mapIds, maps, scale, specularOpacity, blur) {
     const displacementImage = $(mapIds.displacement);
     const specularImage = $(mapIds.specular);
     displacementImage.setAttribute("href", imageDataToDataURL(maps.displacement));
-    displacementImage.setAttribute("width", String(maps.width));
-    displacementImage.setAttribute("height", String(maps.height));
+    displacementImage.setAttribute("width", String(maps.displayWidth ?? maps.width));
+    displacementImage.setAttribute("height", String(maps.displayHeight ?? maps.height));
     specularImage.setAttribute("href", imageDataToDataURL(maps.specular));
-    specularImage.setAttribute("width", String(maps.width));
-    specularImage.setAttribute("height", String(maps.height));
+    specularImage.setAttribute("width", String(maps.displayWidth ?? maps.width));
+    specularImage.setAttribute("height", String(maps.displayHeight ?? maps.height));
     $(mapIds.scale).setAttribute("scale", String(scale));
     if (mapIds.alpha) $(mapIds.alpha).setAttribute("slope", String(specularOpacity));
     if (mapIds.blur) $(mapIds.blur).setAttribute("stdDeviation", String(blur));
@@ -264,12 +270,16 @@
   let mapsDirty = true;
 
   function rebuildLiquidMaps() {
-    const width = Math.max(180, Math.round(root.clientWidth));
-    const height = Math.max(170, Math.round(root.clientHeight));
+    const displayWidth = Math.max(180, Math.round(root.clientWidth));
+    const displayHeight = Math.max(170, Math.round(root.clientHeight));
+    const mapScale = Math.min(1, 300 / displayWidth, 500 / displayHeight);
+    const width = Math.max(1, Math.round(displayWidth * mapScale));
+    const height = Math.max(1, Math.round(displayHeight * mapScale));
     mainMaps = makeRenderMaps({
-      width, height,
-      radius: Math.min(state.radius, Math.floor(Math.min(width, height) / 2)),
-      bezelWidth: state.bezelWidth,
+      width, height, displayWidth, displayHeight,
+      radius: Math.max(1, Math.min(state.radius * mapScale, Math.floor(Math.min(width, height) / 2))),
+      bezelWidth: Math.max(.5, state.bezelWidth * mapScale),
+      physicsBezelWidth: state.bezelWidth,
       glassThickness: state.glassThickness,
       refractiveIndex: state.refractiveIndex,
       surfaceType: state.surfaceType
