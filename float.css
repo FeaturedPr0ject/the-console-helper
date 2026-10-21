@@ -111,37 +111,62 @@ button { -webkit-tap-highlight-color: transparent; }
 .lg-range-track { position:absolute; left:0; right:0; top:50%; height:5px; transform:translateY(-50%); border-radius:10px; background:rgba(125,125,145,.36); border:1px solid rgba(255,255,255,.08); box-shadow:inset 0 1px 2px rgba(0,0,0,.12); overflow:hidden; }
 .lg-range-fill { position:absolute; inset:0 auto 0 0; width:0; border-radius:inherit; background:linear-gradient(90deg,#667eea,#6b8cf7); box-shadow:0 0 8px rgba(102,126,234,.28); }
 .lg-range-thumb {
-  position:absolute; top:50%; left:0; width:40px; height:29px; transform:translate(-50%,-50%);
-  border:1px solid rgba(255,255,255,.62); border-radius:16px;
-  background:linear-gradient(135deg,rgba(255,255,255,.27),rgba(255,255,255,.045) 54%,rgba(255,255,255,.18));
-  box-shadow:inset 0 1px 2px rgba(255,255,255,.75),inset 0 -2px 5px rgba(255,255,255,.12),0 3px 10px rgba(0,0,0,.22);
-  backdrop-filter:blur(12px) saturate(1.7); -webkit-backdrop-filter:blur(12px) saturate(1.7);
-  cursor:grab; touch-action:none;
+  position:absolute; top:50%; left:0; width:90px; height:60px;
+  transform:translate(-50%,-50%) scale(var(--lg-thumb-scale,.6));
+  transform-origin:center center;
+  border:1px solid rgba(255,255,255,.78); border-radius:30px;
+  background:rgba(255,255,255,var(--lg-thumb-opacity,1));
+  box-shadow:0 3px 14px rgba(0,0,0,.1),inset 0 1px rgba(255,255,255,.85);
+  backdrop-filter:blur(12px) saturate(1.5); -webkit-backdrop-filter:blur(12px) saturate(1.5);
+  cursor:grab; touch-action:none; user-select:none; will-change:transform,background-color;
+  overflow:hidden;
 }
-.lg-range-thumb::before { content:""; position:absolute; inset:1px; border-radius:inherit; border:1px solid rgba(255,255,255,.27); background:linear-gradient(120deg,rgba(255,255,255,.32),transparent 46%,rgba(255,255,255,.10)); pointer-events:none; }
-.lg-range-thumb::after { content:""; position:absolute; top:3px; left:18%; right:18%; height:1px; background:linear-gradient(90deg,transparent,#fff,transparent); }
+.lg-range-thumb::before {
+  content:""; position:absolute; inset:1px; border-radius:inherit; pointer-events:none;
+  border:1px solid rgba(255,255,255,.45);
+  background:linear-gradient(115deg,rgba(255,255,255,.4),transparent 40%,transparent 70%,rgba(255,255,255,.18));
+}
+.lg-range-thumb::after {
+  content:""; position:absolute; top:5px; left:18%; right:18%; height:1px;
+  background:linear-gradient(90deg,transparent,#fff,transparent);
+}
 .lg-root.lg-native .lg-range-thumb { backdrop-filter:url(#cg-control-liquid-filter); -webkit-backdrop-filter:url(#cg-control-liquid-filter); }
-.lg-range-thumb:active { cursor:grabbing; }
+.lg-range.dragging .lg-range-thumb { cursor:grabbing; }
 .lg-switch-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:15px 0; }
 .lg-switch-title { font-size:11px; font-weight:650; }
-.lg-switch-description { margin-top:3px; max-width:275px; color:var(--lg-text-secondary); font-size:9px; line-height:1.45; }
+.lg-switch-description { margin-top:3px; max-width:205px; color:var(--lg-text-secondary); font-size:9px; line-height:1.45; }
 .lg-switch {
-  position:relative; isolation:isolate; flex:0 0 62px; width:62px; height:34px;
-  padding:0; overflow:hidden; border:1px solid rgba(255,255,255,.26); border-radius:20px;
-  background:rgba(130,130,150,.29); box-shadow:inset 0 1px 3px rgba(0,0,0,.18);
-  cursor:pointer; touch-action:none;
+  position:relative; isolation:isolate; flex:0 0 160px; width:160px; height:67px;
+  padding:0; overflow:visible; border:0; border-radius:33.5px;
+  background:rgba(148,148,159,.47); box-shadow:inset 0 1px 3px rgba(0,0,0,.12);
+  cursor:pointer; touch-action:none; user-select:none;
 }
-.lg-switch[aria-checked="true"] { background:linear-gradient(135deg,rgba(49,187,94,.95),rgba(29,156,75,.9)); border-color:rgba(255,255,255,.3); box-shadow:inset 0 1px rgba(255,255,255,.25),0 0 12px rgba(54,185,92,.1); }
+.lg-switch[aria-checked="true"] { background:rgba(59,191,78,.93); }
 .lg-switch-thumb {
-  position:absolute; left:3px; top:3px; width:26px; height:26px; border-radius:50%;
-  background:linear-gradient(145deg,rgba(255,255,255,.97),rgba(222,222,235,.88));
-  border:1px solid rgba(255,255,255,.91); box-shadow:inset 0 1px rgba(255,255,255,.95),0 2px 6px rgba(0,0,0,.2);
-  transition:transform .2s cubic-bezier(.2,.8,.2,1); touch-action:none; cursor:grab;
+  position:absolute; z-index:2; left:-21.95px; top:33.5px;
+  width:146px; height:92px; border-radius:46px;
+  transform:translateY(-50%) scale(var(--lg-switch-scale,.65));
+  transform-origin:center center;
+  background-color:rgba(255,255,255,var(--lg-switch-opacity,1));
+  border:1px solid rgba(255,255,255,.75);
+  box-shadow:0 4px 22px rgba(0,0,0,.1);
+  overflow:hidden; will-change:transform,left,background-color,box-shadow;
+  transition:background-color .04s linear;
+  touch-action:none; cursor:grab;
   backdrop-filter:blur(12px) saturate(1.5); -webkit-backdrop-filter:blur(12px) saturate(1.5);
 }
+.lg-switch-thumb::before {
+  content:""; position:absolute; inset:1px; border-radius:inherit; pointer-events:none;
+  border:1px solid rgba(255,255,255,.28);
+  background:linear-gradient(115deg,rgba(255,255,255,.3),transparent 40%,transparent 68%,rgba(255,255,255,.12));
+}
+.lg-switch-thumb::after {
+  content:""; position:absolute; top:5px; left:20%; right:20%; height:1px;
+  background:linear-gradient(90deg,transparent,#fff,transparent);
+}
 .lg-root.lg-native .lg-switch-thumb { backdrop-filter:url(#cg-switch-liquid-filter); -webkit-backdrop-filter:url(#cg-switch-liquid-filter); }
-.lg-switch[aria-checked="true"] .lg-switch-thumb { transform:translateX(28px); }
-.lg-switch:active .lg-switch-thumb { box-shadow:inset 0 1px rgba(255,255,255,.95),0 2px 10px rgba(0,0,0,.22); }
+.lg-switch-thumb:active { cursor:grabbing; }
+.lg-root.lg-hide-controls .lg-glass-control,.lg-root.lg-hide-controls .lg-range-thumb,.lg-root.lg-hide-controls .lg-switch-thumb { backdrop-filter:none!important; -webkit-backdrop-filter:none!important; }
 .lg-actions { display:flex; gap:8px; margin-top:16px; }
 .lg-actions .lg-glass-control { flex:1; padding:9px 10px; font-size:10px; }
 .lg-render-status { margin-top:14px; padding:10px 11px; border-radius:10px; border:1px solid var(--lg-border-color); background:rgba(255,255,255,.045); color:var(--lg-text-secondary); font-size:10px; line-height:1.5; }
