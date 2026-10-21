@@ -49,10 +49,11 @@
     '</filter>',
     '<filter id="cg-switch-liquid-filter" x="-25%" y="-25%" width="150%" height="150%" color-interpolation-filters="sRGB">',
     '<feGaussianBlur in="SourceGraphic" stdDeviation=".25" result="switchBlur"/>',
-    '<feImage id="cg-switch-map" href="" x="0" y="0" width="52" height="52" result="switchMap" preserveAspectRatio="none"/>',
+    '<feImage id="cg-switch-map" href="" x="0" y="0" width="146" height="92" result="switchMap" preserveAspectRatio="none"/>',
     '<feDisplacementMap id="cg-switch-displacement" in="switchBlur" in2="switchMap" scale="18" xChannelSelector="R" yChannelSelector="G" result="switchBent"/>',
-    '<feImage id="cg-switch-shine" href="" x="0" y="0" width="52" height="52" result="switchShine" preserveAspectRatio="none"/>',
-    '<feBlend in="switchShine" in2="switchBent" mode="screen"/>',
+    '<feImage id="cg-switch-shine" href="" x="0" y="0" width="146" height="92" result="switchShine" preserveAspectRatio="none"/>',
+    '<feComponentTransfer in="switchShine" result="switchShineFaded"><feFuncA id="cg-switch-shine-alpha" type="linear" slope=".5"/></feComponentTransfer>',
+    '<feBlend in="switchShineFaded" in2="switchBent" mode="screen"/>',
     '</filter>',
     '</defs></svg>',
     '<div class="lg-content" id="lg-content">',
@@ -104,6 +105,14 @@
     liquid:true, specular:true, glassControls:true
   };
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  class Spring {
+    constructor(value, stiffness = 300, damping = 20) {
+      this.value=value;this.target=value;this.velocity=0;this.stiffness=stiffness;this.damping=damping;
+    }
+    setTarget(target){this.target=target;}
+    update(dt){const force=(this.target-this.value)*this.stiffness;const dampingForce=this.velocity*this.damping;this.velocity+=(force-dampingForce)*dt;this.value+=this.velocity*dt;return this.value;}
+    isSettled(){return Math.abs(this.target-this.value)<.001&&Math.abs(this.velocity)<.001;}
+  }
   const profiles={
     convex_circle:x=>Math.sqrt(Math.max(0,1-Math.pow(1-x,2))),
     convex_squircle:x=>Math.pow(Math.max(0,1-Math.pow(1-x,4)),.25),
@@ -386,14 +395,46 @@
     const pct=(value-min)/(max-min);
     const thumb=el.querySelector(".lg-range-thumb");
     const fill=el.querySelector(".lg-range-fill");
-    const usable=Math.max(0,el.clientWidth-thumb.offsetWidth);
-    thumb.style.left=(thumb.offsetWidth/2+pct*usable)+"px";
+    const visualWidth=thumb.offsetWidth*.6;
+    const usable=Math.max(0,el.clientWidth-visualWidth);
+    thumb.style.left=(visualWidth/2+pct*usable)+"px";
     fill.style.width=(pct*100)+"%";
     el.setAttribute("aria-valuemin",String(min));el.setAttribute("aria-valuemax",String(max));
     el.setAttribute("aria-valuenow",String(value));
     const cfg=rangeConfig[el.dataset.key];
-    const output=$(cfg.output);
-    output.textContent=(cfg.digits===0?String(value):value.toFixed(cfg.digits))+cfg.suffix;
+    $(cfg.output).textContent=(cfg.digits===0?String(value):value.toFixed(cfg.digits))+cfg.suffix;
+  }
+
+  const rangeSprings=new Map();
+  let rangeAnimationFrame=0;
+  function startRangeAnimation(el,active){
+    let item=rangeSprings.get(el);
+    if(!item){
+      item={scale:new Spring(.6,2000,80),opacity:new Spring(1,2000,80),ratio:new Spring(.4,100,10),active:false};
+      rangeSprings.set(el,item);
+    }
+    item.active=active;
+    item.scale.setTarget(active?1:.6);
+    item.opacity.setTarget(active?.1:1);
+    item.ratio.setTarget((active?.9:.4));
+    if(rangeAnimationFrame)return;
+    const tick=()=>{
+      rangeAnimationFrame=0;
+      let settled=true;
+      for(const [range,springs] of rangeSprings){
+        const dt=1/60;
+        const scale=springs.scale.update(dt);
+        const opacity=springs.opacity.update(dt);
+        const ratio=springs.ratio.update(dt);
+        const thumb=range.querySelector(".lg-range-thumb");
+        thumb.style.setProperty("--lg-thumb-scale",String(scale));
+        thumb.style.setProperty("--lg-thumb-opacity",String(opacity));
+        if(springs.active||!springs.scale.isSettled()||!springs.opacity.isSettled()||!springs.ratio.isSettled())settled=false;
+        if(controlMaps)$("cg-control-displacement").setAttribute("scale",String(controlMaps.maxDisplacement*ratio*state.refractionScale));
+      }
+      if(!settled)rangeAnimationFrame=requestAnimationFrame(tick);
+    };
+    rangeAnimationFrame=requestAnimationFrame(tick);
   }
 
   function setRange(el,rawValue,shouldRender=true){
@@ -403,6 +444,7 @@
     el.dataset.value=String(Number(value.toFixed(4)));
     state[key]=Number(el.dataset.value);
     if(key==="uiBlur"||key==="opacity")updateAppearance();
+    if(["bezelWidth","glassThickness","refractiveIndex","radius"].includes(key))mapsDirty=true;
     renderRange(el);
     if(shouldRender)renderGlass();
   }
@@ -410,8 +452,9 @@
   function valueFromPointer(el,clientX){
     const rect=el.getBoundingClientRect(),min=Number(el.dataset.min),max=Number(el.dataset.max);
     const thumb=el.querySelector(".lg-range-thumb");
-    const usable=Math.max(1,rect.width-thumb.offsetWidth);
-    const x=clamp(clientX-rect.left-thumb.offsetWidth/2,0,usable);
+    const visualWidth=thumb.offsetWidth*.6;
+    const usable=Math.max(1,rect.width-visualWidth);
+    const x=clamp(clientX-rect.left-visualWidth/2,0,usable);
     setRange(el,min+(x/usable)*(max-min));
   }
 
@@ -419,12 +462,22 @@
   ranges.forEach(el=>{
     state[el.dataset.key]=rangeValue(el);
     renderRange(el);
-    let active=false;
+    const thumb=el.querySelector(".lg-range-thumb");
+    const springs={scale:new Spring(.6,2000,80),opacity:new Spring(1,2000,80),ratio:new Spring(.4,100,10),active:false};
+    rangeSprings.set(el,springs);
     el.addEventListener("pointerdown",event=>{
-      active=true;el.setPointerCapture(event.pointerId);valueFromPointer(el,event.clientX);
+      event.preventDefault();
+      springs.active=true;
+      el.setPointerCapture(event.pointerId);
+      startRangeAnimation(el,true);
+      valueFromPointer(el,event.clientX);
     });
-    el.addEventListener("pointermove",event=>{if(active)valueFromPointer(el,event.clientX);});
-    const stop=()=>{active=false;};
+    el.addEventListener("pointermove",event=>{if(springs.active)valueFromPointer(el,event.clientX);});
+    const stop=()=>{
+      if(!springs.active)return;
+      springs.active=false;
+      startRangeAnimation(el,false);
+    };
     el.addEventListener("pointerup",stop);el.addEventListener("pointercancel",stop);
     el.addEventListener("keydown",event=>{
       const step=Number(el.dataset.step),v=rangeValue(el);
@@ -435,36 +488,123 @@
     });
   });
 
+  const switchConfig={trackWidth:160,trackHeight:67,thumbWidth:146,thumbHeight:92,thumbRadius:46,bezelWidth:19,glassThickness:47,refractiveIndex:1.5,restScale:.65,activeScale:.9};
+  switchConfig.thumbRestOffset=((1-switchConfig.restScale)*switchConfig.thumbWidth)/2;
+  switchConfig.travel=switchConfig.trackWidth-switchConfig.trackHeight-(switchConfig.thumbWidth-switchConfig.thumbHeight)*switchConfig.restScale;
+  const switchStates=new Map();
+  let switchAnimationFrame=0;
+
+  function getSwitchActive(item){return item.pointerDown||item.forceActive;}
+  function startSwitchAnimation(item){
+    if(switchAnimationFrame)return;
+    const tick=()=>{
+      switchAnimationFrame=0;
+      let allSettled=true;
+      const dt=Math.min(.032,1/60);
+      for(const item of switchStates.values()){
+        const el=$(item.id);
+        const thumb=el.querySelector(".lg-switch-thumb");
+        const active=getSwitchActive(item);
+        item.springs.scale.setTarget(active?switchConfig.activeScale:switchConfig.restScale);
+        item.springs.opacity.setTarget(active?.1:1);
+        item.springs.ratio.setTarget((active?.9:.4)*1);
+        if(!item.pointerDown)item.springs.xRatio.setTarget(item.checked?1:0);
+        const checkedForColor=item.pointerDown?item.xDragRatio>.5:item.checked;
+        item.springs.trackColor.setTarget(checkedForColor?1:0);
+        const xRatio=item.springs.xRatio.update(dt);
+        const scale=item.springs.scale.update(dt);
+        const opacity=item.springs.opacity.update(dt);
+        const trackMix=item.springs.trackColor.update(dt);
+        const ratio=item.springs.ratio.update(dt);
+        const marginLeft=-switchConfig.thumbRestOffset+(switchConfig.trackHeight-switchConfig.thumbHeight*switchConfig.restScale)/2;
+        const thumbX=marginLeft+xRatio*switchConfig.travel;
+        thumb.style.left=thumbX+"px";
+        thumb.style.transform="translateY(-50%) scale("+scale+")";
+        thumb.style.backgroundColor="rgba(255,255,255,"+opacity+")";
+        thumb.style.boxShadow=item.pointerDown
+          ?"0 4px 22px rgba(0,0,0,.1), inset 2px 7px 24px rgba(0,0,0,.09), inset -2px -7px 24px rgba(255,255,255,.09)"
+          :"0 4px 22px rgba(0,0,0,.1)";
+        const r=Math.round(148+(59-148)*trackMix);
+        const g=Math.round(148+(191-148)*trackMix);
+        const b=Math.round(159+(78-159)*trackMix);
+        const a=.47+(.93-.47)*trackMix;
+        el.style.backgroundColor="rgba("+r+","+g+","+b+","+a+")";
+        el.setAttribute("aria-checked",String(item.checked));
+        if(switchMaps)$("cg-switch-displacement").setAttribute("scale",String(switchMaps.maxDisplacement*ratio*state.refractionScale));
+        if(Object.values(item.springs).some(s=>!s.isSettled()))allSettled=false;
+      }
+      if(!allSettled)switchAnimationFrame=requestAnimationFrame(tick);
+    };
+    switchAnimationFrame=requestAnimationFrame(tick);
+  }
+
   function setSwitch(id,on){
-    const el=$(id);
-    el.setAttribute("aria-checked",String(!!on));
-    if(id==="toggle-liquid")state.liquid=!!on;
-    if(id==="toggle-specular")state.specular=!!on;
-    if(id==="toggle-controls")state.glassControls=!!on;
+    const item=switchStates.get(id);
+    if(!item)return;
+    item.checked=!!on;
+    $(id).setAttribute("aria-checked",String(item.checked));
+    if(id==="toggle-liquid")state.liquid=item.checked;
+    if(id==="toggle-specular")state.specular=item.checked;
+    if(id==="toggle-controls")state.glassControls=item.checked;
+    item.springs.xRatio.setTarget(item.checked?1:0);
+    startSwitchAnimation(item);
     renderGlass();
   }
+
   ["toggle-liquid","toggle-specular","toggle-controls"].forEach(id=>{
     const el=$(id);
-    let startX=0,dragged=false,suppressClick=false;
-    el.addEventListener("pointerdown",event=>{
-      startX=event.clientX;dragged=false;el.setPointerCapture(event.pointerId);
+    const item={
+      id,checked:el.getAttribute("aria-checked")==="true",pointerDown:false,forceActive:false,
+      initialPointerX:0,xDragRatio:el.getAttribute("aria-checked")==="true"?1:0,
+      springs:{
+        xRatio:new Spring(el.getAttribute("aria-checked")==="true"?1:0,1000,80),
+        scale:new Spring(switchConfig.restScale,2000,80),
+        opacity:new Spring(1,2000,80),
+        trackColor:new Spring(el.getAttribute("aria-checked")==="true"?1:0,1000,80),
+        ratio:new Spring(.4,100,10)
+      }
+    };
+    switchStates.set(id,item);
+    const thumb=el.querySelector(".lg-switch-thumb");
+    thumb.style.left=(-switchConfig.thumbRestOffset+(switchConfig.trackHeight-switchConfig.thumbHeight*switchConfig.restScale)/2)+"px";
+    thumb.style.top=(switchConfig.trackHeight/2)+"px";
+
+    thumb.addEventListener("pointerdown",event=>{
+      event.preventDefault();event.stopPropagation();
+      item.pointerDown=true;item.initialPointerX=event.clientX;item.xDragRatio=item.checked?1:0;
+      thumb.setPointerCapture(event.pointerId);
+      startSwitchAnimation(item);
     });
-    el.addEventListener("pointermove",event=>{
-      if(Math.abs(event.clientX-startX)>4)dragged=true;
+    thumb.addEventListener("pointermove",event=>{
+      if(!item.pointerDown)return;
+      event.preventDefault();
+      const displacement=event.clientX-item.initialPointerX;
+      const base=item.checked?1:0;
+      const ratio=base+displacement/switchConfig.travel;
+      const overflow=ratio<0?-ratio:ratio>1?ratio-1:0;
+      const sign=ratio<0?-1:1;
+      item.xDragRatio=clamp(ratio,0,1)+sign*overflow/22;
+      item.springs.xRatio.setTarget(item.xDragRatio);
+      startSwitchAnimation(item);
     });
-    el.addEventListener("pointerup",event=>{
-      if(!dragged)return;
-      const rect=el.getBoundingClientRect();
-      setSwitch(id,event.clientX>rect.left+rect.width/2);
-      suppressClick=true;
+    thumb.addEventListener("pointerup",event=>{
+      if(!item.pointerDown)return;
+      item.pointerDown=false;
+      const distance=Math.abs(event.clientX-item.initialPointerX);
+      if(distance<4)item.checked=!item.checked;
+      else item.checked=item.xDragRatio>.5;
+      setSwitch(id,item.checked);
+      startSwitchAnimation(item);
+    });
+    thumb.addEventListener("pointercancel",()=>{
+      if(!item.pointerDown)return;
+      item.pointerDown=false;setSwitch(id,item.checked);
     });
     el.addEventListener("click",event=>{
-      if(suppressClick){suppressClick=false;event.preventDefault();return;}
-      setSwitch(id,el.getAttribute("aria-checked")!=="true");
+      if(event.target!==el)return;
+      setSwitch(id,!item.checked);
     });
-    el.addEventListener("keydown",event=>{
-      if(event.key===" "||event.key==="Enter"){event.preventDefault();setSwitch(id,el.getAttribute("aria-checked")!=="true");}
-    });
+    startSwitchAnimation(item);
   });
 
   shadow.querySelectorAll("[data-surface]").forEach(button=>button.addEventListener("click",()=>{
