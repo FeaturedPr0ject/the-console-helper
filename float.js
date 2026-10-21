@@ -111,115 +111,240 @@
     lip:x=>{const c=Math.pow(Math.max(0,1-Math.pow(1-Math.min(x*2,1),4)),.25);const n=1-Math.sqrt(Math.max(0,1-Math.pow(1-x,2)))+.1;const t=6*Math.pow(x,5)-15*Math.pow(x,4)+10*Math.pow(x,3);return c*(1-t)+n*t;}
   };
 
-  function toDataURL(imageData){
-    const canvas=document.createElement("canvas");
-    canvas.width=imageData.width;canvas.height=imageData.height;
-    canvas.getContext("2d").putImageData(imageData,0,0);
+  function imageDataToDataURL(imageData) {
+    const canvas = document.createElement("canvas");
+    canvas.width = imageData.width;
+    canvas.height = imageData.height;
+    const context = canvas.getContext("2d");
+    context.putImageData(imageData, 0, 0);
     return canvas.toDataURL("image/png");
   }
 
-  function displacementProfile(){
-    const fn=profiles[state.surfaceType],eta=1/state.refractiveIndex,result=[];
-    for(let i=0;i<128;i++){
-      const x=i/128,y=fn(x),step=x<1?.0001:-.0001,x2=clamp(x+step,0,1);
-      const derivative=(fn(x2)-y)/(x2-x||step),magnitude=Math.sqrt(derivative*derivative+1);
-      const nx=-derivative/magnitude,ny=-1/magnitude,k=1-eta*eta*(1-ny*ny);
-      if(k<0){result.push(0);continue;}
-      const q=Math.sqrt(k),rx=-(eta*ny+q)*nx,ry=eta-(eta*ny+q)*ny;
-      if(!Number.isFinite(rx)||!Number.isFinite(ry)||Math.abs(ry)<.00001){result.push(0);continue;}
-      result.push(clamp(rx*((y*state.bezelWidth+state.glassThickness)/ry),-1000,1000));
+  function calculateDisplacementMap1D(glassThickness, bezelWidth, surfaceFn, refractiveIndex, samples = 128) {
+    const eta = 1 / refractiveIndex;
+    const result = [];
+    function refract(normalX, normalY) {
+      const dot = normalY;
+      const k = 1 - eta * eta * (1 - dot * dot);
+      if (k < 0) return null;
+      const root = Math.sqrt(k);
+      return [-(eta * dot + root) * normalX, eta - (eta * dot + root) * normalY];
+    }
+    for (let i = 0; i < samples; i++) {
+      const x = i / samples;
+      const y = surfaceFn(x);
+      const dx = x < 1 ? 0.0001 : -0.0001;
+      const x2 = clamp(x + dx, 0, 1);
+      const derivative = (surfaceFn(x2) - y) / dx;
+      const magnitude = Math.sqrt(derivative * derivative + 1);
+      const normalX = -derivative / magnitude;
+      const normalY = -1 / magnitude;
+      const refracted = refract(normalX, normalY);
+      if (!refracted || !Number.isFinite(refracted[1]) || Math.abs(refracted[1]) < 0.00001) {
+        result.push(0);
+      } else {
+        const remainingHeight = y * bezelWidth + glassThickness;
+        result.push(refracted[0] * (remainingHeight / refracted[1]));
+      }
     }
     return result;
   }
 
-  function makeMaps(width,height,profile,cornerRadius,bezelWidth,scale=.38){
-    const w=Math.max(1,Math.min(250,Math.round(width*scale)));
-    const h=Math.max(1,Math.min(450,Math.round(height*scale)));
-    const radius=Math.max(1,Math.min(cornerRadius*scale,h/2,w/2));
-    const b=Math.max(.5,bezelWidth*scale);
-    const displacementCanvas=document.createElement("canvas");
-    displacementCanvas.width=w;displacementCanvas.height=h;
-    const ctx=displacementCanvas.getContext("2d",{willReadFrequently:true});
-    const disp=ctx.createImageData(w,h);
-    for(let i=0;i<disp.data.length;i+=4){disp.data[i]=128;disp.data[i+1]=128;disp.data[i+3]=255;}
-    const radius2=radius*radius,plus=(radius+1)*(radius+1),inner=Math.max(0,(radius-b)*(radius-b));
-    const gapX=w-2*radius,gapY=h-2*radius;
-    const maxDisplacement=Math.max(1,...profile.map(Math.abs));
-    const shineCtx=document.createElement("canvas");
-    shineCtx.width=w;shineCtx.height=h;
-    const sctx=shineCtx.getContext("2d",{willReadFrequently:true});
-    const shine=sctx.createImageData(w,h);
-    const vx=Math.cos(Math.PI/3),vy=Math.sin(Math.PI/3);
-    for(let y=0;y<h;y++){
-      for(let x=0;x<w;x++){
-        const px=x<radius?x-radius:x>=w-radius?x-radius-gapX:0;
-        const py=y<radius?y-radius:y>=h-radius?y-radius-gapY:0;
-        const d2=px*px+py*py;
-        if(d2>plus||d2<inner)continue;
-        const distance=Math.sqrt(d2),opacity=d2<radius2?1:1-(distance-radius)/(Math.sqrt(plus)-radius);
-        const ratio=clamp((radius-distance)/b,0,1);
-        const index=clamp(Math.floor(ratio*profile.length),0,profile.length-1);
-        const offset=(y*w+x)*4;
-        const delta=profile[index]||0;
-        const dx=-(distance>0?px/distance:0)*delta/maxDisplacement;
-        const dy=-(distance>0?py/distance:0)*delta/maxDisplacement;
-        disp.data[offset]=clamp(128+dx*127*opacity,0,255);
-        disp.data[offset+1]=clamp(128+dy*127*opacity,0,255);
-        const cos=distance>0?px/distance:0,sin=distance>0?-py/distance:0;
-        const dot=Math.abs(cos*vx+sin*vy);
-        const edge=clamp((radius-distance)/1.5,0,1);
-        const falloff=Math.sqrt(Math.max(0,1-Math.pow(1-edge,2)));
-        const strength=dot*falloff;
-        const color=Math.min(255,255*strength);
-        shine.data[offset]=color;shine.data[offset+1]=color;shine.data[offset+2]=color;
-        shine.data[offset+3]=Math.min(255,color*strength*opacity);
+  function calculateDisplacementMap2D(canvasWidth, canvasHeight, objectWidth, objectHeight, radius, bezelWidth, maximumDisplacement, precomputedMap) {
+    const imageData = new ImageData(canvasWidth, canvasHeight);
+    for (let i = 0; i < imageData.data.length; i += 4) {
+      imageData.data[i] = 128;
+      imageData.data[i + 1] = 128;
+      imageData.data[i + 2] = 0;
+      imageData.data[i + 3] = 255;
+    }
+    const radiusSquared = radius * radius;
+    const radiusPlusOneSquared = (radius + 1) * (radius + 1);
+    const radiusMinusBezelSquared = Math.max(0, (radius - bezelWidth) * (radius - bezelWidth));
+    const widthBetweenRadiuses = objectWidth - radius * 2;
+    const heightBetweenRadiuses = objectHeight - radius * 2;
+    const objectX = (canvasWidth - objectWidth) / 2;
+    const objectY = (canvasHeight - objectHeight) / 2;
+    for (let y = 0; y < objectHeight; y++) {
+      for (let x = 0; x < objectWidth; x++) {
+        const idx = ((objectY + y) * canvasWidth + objectX + x) * 4;
+        const isLeft = x < radius;
+        const isRight = x >= objectWidth - radius;
+        const isTop = y < radius;
+        const isBottom = y >= objectHeight - radius;
+        const px = isLeft ? x - radius : isRight ? x - radius - widthBetweenRadiuses : 0;
+        const py = isTop ? y - radius : isBottom ? y - radius - heightBetweenRadiuses : 0;
+        const distanceSquared = px * px + py * py;
+        if (distanceSquared > radiusPlusOneSquared || distanceSquared < radiusMinusBezelSquared) continue;
+        const opacity = distanceSquared < radiusSquared ? 1 : 1 - (Math.sqrt(distanceSquared) - Math.sqrt(radiusSquared)) / (Math.sqrt(radiusPlusOneSquared) - Math.sqrt(radiusSquared));
+        const distance = Math.sqrt(distanceSquared);
+        const cos = distance > 0 ? px / distance : 0;
+        const sin = distance > 0 ? py / distance : 0;
+        const ratio = clamp((radius - distance) / bezelWidth, 0, 1);
+        const mapIndex = Math.max(0, Math.min(Math.floor(ratio * precomputedMap.length), precomputedMap.length - 1));
+        const displacement = precomputedMap[mapIndex] || 0;
+        const dx = maximumDisplacement > 0 ? (-cos * displacement) / maximumDisplacement : 0;
+        const dy = maximumDisplacement > 0 ? (-sin * displacement) / maximumDisplacement : 0;
+        imageData.data[idx] = clamp(128 + dx * 127 * opacity, 0, 255);
+        imageData.data[idx + 1] = clamp(128 + dy * 127 * opacity, 0, 255);
+        imageData.data[idx + 2] = 0;
+        imageData.data[idx + 3] = 255;
       }
     }
-    const dc=document.createElement("canvas");dc.width=w;dc.height=h;dc.getContext("2d").putImageData(disp,0,0);
-    const sc=document.createElement("canvas");sc.width=w;sc.height=h;sc.getContext("2d").putImageData(shine,0,0);
-    return {displacement:dc.toDataURL("image/png"),shine:sc.toDataURL("image/png"),width:w,height:h,maxDisplacement};
+    return imageData;
   }
 
-  function setMap(imageId,shineId,scaleId,maps,filterScale,targetWidth,targetHeight){
-    const image=$(imageId),shine=$(shineId);
-    image.setAttribute("href",maps.displacement);
-    image.setAttribute("width",String(targetWidth));image.setAttribute("height",String(targetHeight));
-    shine.setAttribute("href",maps.shine);
-    shine.setAttribute("width",String(targetWidth));shine.setAttribute("height",String(targetHeight));
-    if(scaleId)$(scaleId).setAttribute("scale",String(filterScale));
+  function calculateSpecularHighlight(objectWidth, objectHeight, radius, bezelWidth, specularAngle = Math.PI / 3) {
+    const imageData = new ImageData(objectWidth, objectHeight);
+    const vector = [Math.cos(specularAngle), Math.sin(specularAngle)];
+    const thickness = 1.5;
+    const radiusSquared = radius * radius;
+    const radiusPlusOneSquared = (radius + 1) * (radius + 1);
+    const radiusMinusSpecularSquared = Math.max(0, (radius - thickness) * (radius - thickness));
+    const widthBetweenRadiuses = objectWidth - radius * 2;
+    const heightBetweenRadiuses = objectHeight - radius * 2;
+    for (let y = 0; y < objectHeight; y++) {
+      for (let x = 0; x < objectWidth; x++) {
+        const idx = (y * objectWidth + x) * 4;
+        const isLeft = x < radius;
+        const isRight = x >= objectWidth - radius;
+        const isTop = y < radius;
+        const isBottom = y >= objectHeight - radius;
+        const px = isLeft ? x - radius : isRight ? x - radius - widthBetweenRadiuses : 0;
+        const py = isTop ? y - radius : isBottom ? y - radius - heightBetweenRadiuses : 0;
+        const distanceSquared = px * px + py * py;
+        if (distanceSquared > radiusPlusOneSquared || distanceSquared < radiusMinusSpecularSquared) continue;
+        const distance = Math.sqrt(distanceSquared);
+        const distanceFromSide = radius - distance;
+        const opacity = distanceSquared < radiusSquared ? 1 : 1 - (distance - Math.sqrt(radiusSquared)) / (Math.sqrt(radiusPlusOneSquared) - Math.sqrt(radiusSquared));
+        const cos = distance > 0 ? px / distance : 0;
+        const sin = distance > 0 ? -py / distance : 0;
+        const dot = Math.abs(cos * vector[0] + sin * vector[1]);
+        const edgeRatio = clamp(distanceFromSide / thickness, 0, 1);
+        const falloff = Math.sqrt(1 - (1 - edgeRatio) * (1 - edgeRatio));
+        const coefficient = dot * falloff;
+        const color = Math.min(255, 255 * coefficient);
+        const alpha = Math.min(255, color * coefficient * opacity);
+        imageData.data[idx] = color;
+        imageData.data[idx + 1] = color;
+        imageData.data[idx + 2] = color;
+        imageData.data[idx + 3] = alpha;
+      }
+    }
+    return imageData;
   }
 
-  let renderFrame=0;
-  function renderGlass(){
-    if(renderFrame)cancelAnimationFrame(renderFrame);
-    renderFrame=requestAnimationFrame(()=>{
-      renderFrame=0;
-      const width=Math.max(180,Math.round(root.clientWidth));
-      const height=Math.max(170,Math.round(root.clientHeight));
-      const profile=displacementProfile();
-      const main=makeMaps(width,height,profile,state.radius,state.bezelWidth,.36);
-      const maxDisp=Math.max(...profile.map(Math.abs))*state.refractionScale;
-      setMap("cg-main-map","cg-main-specular","cg-main-displacement",main,maxDisp,width,height);
-      $("cg-main-blur").setAttribute("stdDeviation",String(state.blur));
-      $("cg-main-specular-alpha").setAttribute("slope",String(state.specular?state.specularOpacity:0));
+  function makeRenderMaps(config) {
+    const surface = profiles[config.surfaceType];
+    const profile = calculateDisplacementMap1D(config.glassThickness, config.bezelWidth, surface, config.refractiveIndex);
+    const maxDisplacement = Math.max(0, ...profile.map(Math.abs));
+    const displacement = calculateDisplacementMap2D(config.width, config.height, config.width, config.height, config.radius, config.bezelWidth, maxDisplacement || 1, profile);
+    const specular = calculateSpecularHighlight(config.width, config.height, config.radius, config.bezelWidth);
+    return { displacement, specular, profile, maxDisplacement, width: config.width, height: config.height };
+  }
 
-      const control=makeMaps(160,56,profile,28,Math.min(14,state.bezelWidth),.7);
-      setMap("cg-control-map","cg-control-shine","cg-control-displacement",control,Math.min(34,control.maxDisplacement*state.refractionScale*.22),160,56);
-      const sw=makeMaps(52,52,profile,26,Math.min(13,state.bezelWidth),.8);
-      $("cg-switch-map").setAttribute("href",sw.displacement);
-      $("cg-switch-map").setAttribute("width","52");$("cg-switch-map").setAttribute("height","52");
-      $("cg-switch-shine").setAttribute("href",sw.shine);
-      $("cg-switch-shine").setAttribute("width","52");$("cg-switch-shine").setAttribute("height","52");
-      $("cg-switch-displacement").setAttribute("scale",String(Math.min(22,sw.maxDisplacement*state.refractionScale*.25)));
+  function applyRenderMaps(mapIds, maps, scale, specularOpacity, blur) {
+    const displacementImage = $(mapIds.displacement);
+    const specularImage = $(mapIds.specular);
+    displacementImage.setAttribute("href", imageDataToDataURL(maps.displacement));
+    displacementImage.setAttribute("width", String(maps.width));
+    displacementImage.setAttribute("height", String(maps.height));
+    specularImage.setAttribute("href", imageDataToDataURL(maps.specular));
+    specularImage.setAttribute("width", String(maps.width));
+    specularImage.setAttribute("height", String(maps.height));
+    $(mapIds.scale).setAttribute("scale", String(scale));
+    if (mapIds.alpha) $(mapIds.alpha).setAttribute("slope", String(specularOpacity));
+    if (mapIds.blur) $(mapIds.blur).setAttribute("stdDeviation", String(blur));
+  }
 
-      root.classList.toggle("lg-native",nativeSupport&&state.liquid);
-      root.classList.toggle("lg-hide-controls",!state.glassControls);
-      root.classList.toggle("lg-liquid-off",!state.liquid);
+  let renderFrame = 0;
+  let mainMaps = null;
+  let controlMaps = null;
+  let switchMaps = null;
+  let mapsDirty = true;
+
+  function rebuildLiquidMaps() {
+    const width = Math.max(180, Math.round(root.clientWidth));
+    const height = Math.max(170, Math.round(root.clientHeight));
+    mainMaps = makeRenderMaps({
+      width, height,
+      radius: Math.min(state.radius, Math.floor(Math.min(width, height) / 2)),
+      bezelWidth: state.bezelWidth,
+      glassThickness: state.glassThickness,
+      refractiveIndex: state.refractiveIndex,
+      surfaceType: state.surfaceType
+    });
+    applyRenderMaps({
+      displacement: "cg-main-map",
+      specular: "cg-main-specular",
+      scale: "cg-main-displacement",
+      alpha: "cg-main-specular-alpha",
+      blur: "cg-main-blur"
+    }, mainMaps, mainMaps.maxDisplacement * state.refractionScale, state.specular ? state.specularOpacity : 0, state.blur);
+
+    const sliderProfile = calculateDisplacementMap1D(80, 16, profiles.convex_squircle, 1.45);
+    const sliderMax = Math.max(0, ...sliderProfile.map(Math.abs));
+    controlMaps = {
+      displacement: calculateDisplacementMap2D(90, 60, 90, 60, 30, 16, sliderMax || 1, sliderProfile),
+      specular: calculateSpecularHighlight(90, 60, 30, 16),
+      width: 90,
+      height: 60,
+      maxDisplacement: sliderMax
+    };
+    applyRenderMaps({
+      displacement: "cg-control-map",
+      specular: "cg-control-shine",
+      scale: "cg-control-displacement",
+      alpha: "cg-control-shine-alpha",
+      blur: null
+    }, controlMaps, Math.min(34, sliderMax * state.refractionScale), state.specular ? state.specularOpacity : 0.7, 0);
+
+    const switchProfile = calculateDisplacementMap1D(47, 19, profiles.convex_squircle, 1.5);
+    const switchMax = Math.max(0, ...switchProfile.map(Math.abs));
+    switchMaps = {
+      displacement: calculateDisplacementMap2D(146, 92, 146, 92, 46, 19, switchMax || 1, switchProfile),
+      specular: calculateSpecularHighlight(146, 92, 46, 19),
+      width: 146,
+      height: 92,
+      maxDisplacement: switchMax
+    };
+    applyRenderMaps({
+      displacement: "cg-switch-map",
+      specular: "cg-switch-shine",
+      scale: "cg-switch-displacement",
+      alpha: "cg-switch-shine-alpha",
+      blur: null
+    }, switchMaps, Math.min(28, switchMax * state.refractionScale), state.specular ? 0.5 : 0, 0);
+
+    mapsDirty = false;
+  }
+
+  function renderGlass(rebuildMaps = false) {
+    if (rebuildMaps) mapsDirty = true;
+    if (renderFrame) cancelAnimationFrame(renderFrame);
+    renderFrame = requestAnimationFrame(() => {
+      renderFrame = 0;
+      if (mapsDirty || !mainMaps || !controlMaps || !switchMaps) rebuildLiquidMaps();
+
+      $("cg-main-displacement").setAttribute("scale", String(mainMaps.maxDisplacement * state.refractionScale));
+      $("cg-main-blur").setAttribute("stdDeviation", String(state.blur));
+      $("cg-main-specular-alpha").setAttribute("slope", String(state.specular ? state.specularOpacity : 0));
+      $("cg-control-displacement").setAttribute("scale", String(Math.min(34, controlMaps.maxDisplacement * state.refractionScale)));
+      $("cg-control-shine-alpha").setAttribute("slope", String(state.specular ? state.specularOpacity : 0.7));
+      $("cg-switch-displacement").setAttribute("scale", String(Math.min(28, switchMaps.maxDisplacement * state.refractionScale)));
+      $("cg-switch-shine-alpha").setAttribute("slope", String(state.specular ? 0.5 : 0));
+
+      root.classList.toggle("lg-native", nativeSupport && state.liquid);
+      root.classList.toggle("lg-hide-controls", !state.glassControls);
       updateAppearance();
-      $("lg-status-text").textContent=state.liquid?(nativeSupport?"Live SVG refraction":"Glass styling · blur fallback"):"Liquid refraction off";
-      $("lg-render-status").textContent=nativeSupport
-        ?(state.liquid?"Liquid filter is attached to the floating surface, custom slider lenses, buttons and switch knobs.":"Refraction is disabled; the glass styling remains.")
-        :"This Chromium build does not expose SVG backdrop-filter to CSS. Liquid styling is active, but live background bending falls back to blur.";
+      $("lg-status-text").textContent = state.liquid
+        ? (nativeSupport ? "Native SVG refraction" : "CSS glass fallback")
+        : "Liquid refraction off";
+      $("lg-render-status").textContent = nativeSupport
+        ? (state.liquid
+          ? "Using the original demo renderer: Snell-law displacement maps, specular maps and separate filters for panel, slider lenses and switch knobs."
+          : "Refraction is disabled; CSS glass styling remains.")
+        : "This Chromium build did not confirm SVG backdrop-filter. CSS glass remains visible; live backdrop bending may require a compatible Chrome build.";
     });
   }
 
