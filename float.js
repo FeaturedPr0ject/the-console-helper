@@ -27,7 +27,7 @@
 
   const filterHost = document.createElement("div");
   filterHost.id = "coneui-liquid-glass-filter-host";
-  filterHost.style.cssText = "position:fixed;left:0;top:0;width:0;height:0;overflow:hidden;pointer-events:none;z-index:-1;";
+  filterHost.style.cssText = "position:fixed;left:0;top:0;width:0;height:0;overflow:hidden;pointer-events:none;";
   filterHost.innerHTML = [
     '<svg aria-hidden="true" width="0" height="0"><defs>',
     '<filter id="cg-liquid-filter" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">',
