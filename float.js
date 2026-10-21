@@ -609,7 +609,7 @@
 
   shadow.querySelectorAll("[data-surface]").forEach(button=>button.addEventListener("click",()=>{
     shadow.querySelectorAll("[data-surface]").forEach(item=>item.classList.toggle("active",item===button));
-    state.surfaceType=button.dataset.surface;renderGlass();
+    state.surfaceType=button.dataset.surface;renderGlass(true);
   }));
 
   function setTheme(theme){
@@ -644,7 +644,8 @@
     });
     state.surfaceType="convex_squircle";
     shadow.querySelectorAll("[data-surface]").forEach(b=>b.classList.toggle("active",b.dataset.surface==="convex_squircle"));
-    renderGlass();
+    mapsDirty=true;
+    renderGlass(true);
   }
   $("lg-reset-optical").onclick=resetOptical;
   $("lg-render").onclick=()=>renderGlass();
@@ -682,7 +683,7 @@
     if(resizeTimer)cancelAnimationFrame(resizeTimer);
     resizeTimer=requestAnimationFrame(()=>{
       ranges.forEach(renderRange);
-      renderGlass();
+      renderGlass(true);
     });
   });
   observer.observe(root);
@@ -691,7 +692,7 @@
     if(r.right>innerWidth)host.style.left=Math.max(0,innerWidth-host.offsetWidth)+"px";
     if(r.bottom>innerHeight)host.style.top=Math.max(0,innerHeight-host.offsetHeight)+"px";
     ranges.forEach(renderRange);
-    renderGlass();
+    renderGlass(true);
   });
 
   updateAppearance();
