@@ -41,7 +41,7 @@
     '<filter id="cg-control-liquid-filter" x="-20%" y="-25%" width="140%" height="150%" color-interpolation-filters="sRGB">',
     '<feGaussianBlur in="SourceGraphic" stdDeviation=".25" result="controlBlur"/>',
     '<feImage id="cg-control-displacement-image" href="" x="0" y="0" width="160" height="56" result="controlMap" preserveAspectRatio="none"/>',
-    '<feDisplacementMap in="controlBlur" in2="controlMap" scale="22" xChannelSelector="R" yChannelSelector="G" result="controlBent"/>',
+    '<feDisplacementMap id="cg-control-displacement" in="controlBlur" in2="controlMap" scale="22" xChannelSelector="R" yChannelSelector="G" result="controlBent"/>',
     '<feImage id="cg-control-specular-image" href="" x="0" y="0" width="160" height="56" result="controlShine" preserveAspectRatio="none"/>',
     '<feBlend in="controlShine" in2="controlBent" mode="screen"/>',
     '</filter></defs></svg>',
