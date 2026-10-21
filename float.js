@@ -1,155 +1,372 @@
-(() => {
+(async () => {
   const ID = "coneui-liquid-glass-float";
-  const STYLE_ID = "coneui-liquid-glass-style";
+  const CSS_URL = "https://raw.githubusercontent.com/FeaturedPr0ject/the-console-helper/main/float.css";
   document.getElementById(ID)?.remove();
-  document.getElementById(STYLE_ID)?.remove();
 
   const host = document.createElement("div");
   host.id = ID;
-  host.style.cssText = "all:initial;position:fixed;right:24px;top:24px;z-index:2147483647;pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;";
+  host.style.cssText = "all:initial;position:fixed;right:24px;top:24px;z-index:2147483647;width:max-content;height:max-content;max-width:calc(100vw - 16px);pointer-events:none;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;";
+
+  const shadow = host.attachShadow({mode:"open"});
+  document.documentElement.appendChild(host);
+
+  let cssText = "";
+  try {
+    const response = await fetch(CSS_URL, {cache:"no-store"});
+    if (!response.ok) throw new Error("CSS fetch failed: HTTP " + response.status);
+    cssText = await response.text();
+  } catch (error) {
+    host.remove();
+    console.error("ConeUI Float could not load float.css from GitHub.", error);
+    return;
+  }
+
+  const style = document.createElement("style");
+  style.textContent = cssText;
+  shadow.appendChild(style);
 
   const markup = [
-    '<section class="cg-window" id="cg-window">',
-    '<div class="cg-glass-surface" id="cg-glass-surface"></div>',
-    '<svg class="cg-filter-defs" aria-hidden="true"><defs>',
-    '<filter id="coneui-liquid-filter" x="-15%" y="-15%" width="130%" height="130%" color-interpolation-filters="sRGB">',
-    '<feGaussianBlur id="cg-filter-blur" in="SourceGraphic" stdDeviation="0.5" result="blurred"/>',
-    '<feImage id="cg-displacement-image" href="" x="0" y="0" width="420" height="520" result="displacement_map" preserveAspectRatio="none"/>',
-    '<feDisplacementMap id="cg-displacement-filter" in="blurred" in2="displacement_map" scale="80" xChannelSelector="R" yChannelSelector="G" result="displaced"/>',
-    '<feColorMatrix in="displaced" type="saturate" values="1.3" result="displaced_saturated"/>',
-    '<feImage id="cg-specular-image" href="" x="0" y="0" width="420" height="520" result="specular_layer" preserveAspectRatio="none"/>',
-    '<feComponentTransfer in="specular_layer" result="specular_faded"><feFuncA id="cg-specular-alpha" type="linear" slope="0.7"/></feComponentTransfer>',
-    '<feBlend in="specular_faded" in2="displaced_saturated" mode="screen"/>',
+    '<section class="lg-root" id="lg-root">',
+    '<div class="lg-backdrop" id="lg-backdrop"></div>',
+    '<svg class="lg-filter-defs" aria-hidden="true"><defs>',
+    '<filter id="cg-liquid-filter" x="-12%" y="-12%" width="124%" height="124%" color-interpolation-filters="sRGB">',
+    '<feGaussianBlur id="cg-main-blur" in="SourceGraphic" stdDeviation=".5" result="blurred"/>',
+    '<feImage id="cg-main-displacement-image" href="" x="0" y="0" width="420" height="520" result="displacement_map" preserveAspectRatio="none"/>',
+    '<feDisplacementMap id="cg-main-displacement" in="blurred" in2="displacement_map" scale="75" xChannelSelector="R" yChannelSelector="G" result="displaced"/>',
+    '<feColorMatrix in="displaced" type="saturate" values="1.25" result="saturated"/>',
+    '<feImage id="cg-main-specular-image" href="" x="0" y="0" width="420" height="520" result="specular_layer" preserveAspectRatio="none"/>',
+    '<feComponentTransfer in="specular_layer" result="specular_faded"><feFuncA id="cg-main-specular-alpha" type="linear" slope=".72"/></feComponentTransfer>',
+    '<feBlend in="specular_faded" in2="saturated" mode="screen"/>',
+    '</filter>',
+    '<filter id="cg-control-liquid-filter" x="-20%" y="-25%" width="140%" height="150%" color-interpolation-filters="sRGB">',
+    '<feGaussianBlur in="SourceGraphic" stdDeviation=".25" result="controlBlur"/>',
+    '<feImage id="cg-control-displacement-image" href="" x="0" y="0" width="160" height="56" result="controlMap" preserveAspectRatio="none"/>',
+    '<feDisplacementMap in="controlBlur" in2="controlMap" scale="22" xChannelSelector="R" yChannelSelector="G" result="controlBent"/>',
+    '<feImage id="cg-control-specular-image" href="" x="0" y="0" width="160" height="56" result="controlShine" preserveAspectRatio="none"/>',
+    '<feBlend in="controlShine" in2="controlBent" mode="screen"/>',
     '</filter></defs></svg>',
-    '<div class="cg-content" id="cg-content">',
-    '<header class="cg-header" id="cg-drag"><div class="cg-mark">◈</div><div class="cg-heading"><div class="cg-title">Liquid Glass</div><div class="cg-subtitle">Optical material controls</div></div><div class="cg-spacer"></div><button class="cg-icon-button" id="cg-min" title="Minimize">−</button><button class="cg-icon-button" id="cg-close" title="Close">×</button></header>',
-    '<nav class="cg-tabs"><button class="cg-tab cg-active" data-page="material">Material</button><button class="cg-tab" data-page="appearance">Appearance</button></nav>',
-    '<main class="cg-main" id="cg-main">',
-    '<section class="cg-page" id="cg-page-material">',
-    '<div class="cg-intro"><span class="cg-intro-icon">✧</span><div><div class="cg-intro-title">Liquid Glass material</div><div class="cg-intro-copy">Change the optical profile and render the effect on this floating panel. No website is embedded.</div></div></div>',
-    '<div class="cg-controls-panel"><div class="cg-controls-header"><span class="cg-controls-header-text">Surface profile</span><span class="cg-controls-header-line"></span></div>',
-    '<div class="cg-surface-selector"><button class="cg-surface-btn cg-active" data-surface="convex_squircle">Convex Squircle</button><button class="cg-surface-btn" data-surface="convex_circle">Convex Circle</button><button class="cg-surface-btn" data-surface="concave">Concave</button><button class="cg-surface-btn" data-surface="lip">Soft Lip</button></div>',
-    '<div class="cg-controls-header cg-spaced"><span class="cg-controls-header-text">Optical parameters</span><span class="cg-controls-header-line"></span></div>',
-    '<div class="cg-control-row"><label class="cg-control-label" for="cg-bezel">Bezel width</label><input class="cg-control-slider" id="cg-bezel" type="range" min="3" max="18" value="10" step="1"><output class="cg-control-value" id="cg-bezel-value">10 px</output></div>',
-    '<div class="cg-control-row"><label class="cg-control-label" for="cg-thickness">Glass thickness</label><input class="cg-control-slider" id="cg-thickness" type="range" min="20" max="240" value="150" step="5"><output class="cg-control-value" id="cg-thickness-value">150</output></div>',
-    '<div class="cg-control-row"><label class="cg-control-label" for="cg-index">Refractive index</label><input class="cg-control-slider" id="cg-index" type="range" min="1.1" max="2.2" value="1.5" step="0.05"><output class="cg-control-value" id="cg-index-value">1.50</output></div>',
-    '<div class="cg-control-row"><label class="cg-control-label" for="cg-refraction">Refraction scale</label><input class="cg-control-slider" id="cg-refraction" type="range" min="0.2" max="3.5" value="1.5" step="0.1"><output class="cg-control-value" id="cg-refraction-value">1.50</output></div>',
-    '<div class="cg-control-row"><label class="cg-control-label" for="cg-specular">Specular opacity</label><input class="cg-control-slider" id="cg-specular" type="range" min="0" max="1.5" value="0.7" step="0.05"><output class="cg-control-value" id="cg-specular-value">0.70</output></div>',
-    '<div class="cg-control-row"><label class="cg-control-label" for="cg-blur">Optical blur</label><input class="cg-control-slider" id="cg-blur" type="range" min="0" max="3" value="0.5" step="0.1"><output class="cg-control-value" id="cg-blur-value">0.5</output></div>',
-    '<div class="cg-actions"><button class="cg-action-button" id="cg-reset-optical">Reset parameters</button><button class="cg-action-button cg-primary" id="cg-rerender">Render material</button></div></div></section>',
-    '<section class="cg-page" id="cg-page-appearance" hidden><div class="cg-controls-panel">',
-    '<div class="cg-controls-header"><span class="cg-controls-header-text">Glass appearance</span><span class="cg-controls-header-line"></span></div>',
-    '<div class="cg-control-row"><label class="cg-control-label" for="cg-ui-blur">Fallback blur</label><input class="cg-control-slider" id="cg-ui-blur" type="range" min="0" max="36" value="18" step="1"><output class="cg-control-value" id="cg-ui-blur-value">18 px</output></div>',
-    '<div class="cg-control-row"><label class="cg-control-label" for="cg-opacity">Glass tint</label><input class="cg-control-slider" id="cg-opacity" type="range" min="4" max="55" value="18" step="1"><output class="cg-control-value" id="cg-opacity-value">18%</output></div>',
-    '<div class="cg-control-row"><label class="cg-control-label" for="cg-radius">Corner radius</label><input class="cg-control-slider" id="cg-radius" type="range" min="14" max="42" value="24" step="1"><output class="cg-control-value" id="cg-radius-value">24 px</output></div>',
-    '<div class="cg-controls-header cg-spaced"><span class="cg-controls-header-text">Color scheme</span><span class="cg-controls-header-line"></span></div>',
-    '<div class="cg-surface-selector"><button class="cg-surface-btn cg-active" id="cg-dark">Dark Glass</button><button class="cg-surface-btn" id="cg-light">Light Glass</button></div>',
-    '<div class="cg-render-status" id="cg-render-status">Preparing SVG renderer…</div>',
-    '<div class="cg-actions"><button class="cg-action-button" id="cg-reset-all">Reset all settings</button><button class="cg-action-button cg-primary" id="cg-center">Restore position</button></div>',
-    '</div></section></main>',
-    '<footer class="cg-footer"><span class="cg-status"><i class="cg-dot"></i><span id="cg-status-text">Liquid Glass renderer</span></span><span>LIQUID GLASS · 01</span></footer>',
+    '<div class="lg-content" id="lg-content">',
+    '<header class="lg-header" id="lg-drag"><div class="lg-brand-mark">◈</div><div><div class="lg-title">ConeUI Liquid Glass</div><div class="lg-subtitle">Material system · CSS + SVG</div></div><div class="lg-spacer"></div><button class="lg-icon-button lg-glass-control" id="lg-min" title="Minimize" aria-label="Minimize">−</button><button class="lg-icon-button lg-glass-control" id="lg-close" title="Close" aria-label="Close">×</button></header>',
+    '<nav class="lg-tabs" id="lg-tabs"><button class="lg-tab active lg-glass-control" data-page="material">Material</button><button class="lg-tab lg-glass-control" data-page="appearance">Appearance</button></nav>',
+    '<main class="lg-main" id="lg-main">',
+    '<section class="lg-page" id="lg-page-material">',
+    '<div class="lg-intro"><span class="lg-intro-icon">✧</span><div><div class="lg-intro-title">Liquid Glass material</div><div class="lg-intro-copy">Adjust the glass applied to this floating window. No website is embedded.</div></div></div>',
+    '<div class="lg-controls-panel">',
+    '<div class="lg-section-heading"><span>Surface profile</span><span class="lg-heading-line"></span></div>',
+    '<div class="lg-surface-selector"><button class="lg-glass-control active" data-surface="convex_squircle">Convex Squircle</button><button class="lg-glass-control" data-surface="convex_circle">Convex Circle</button><button class="lg-glass-control" data-surface="concave">Concave</button><button class="lg-glass-control" data-surface="lip">Soft Lip</button></div>',
+    '<div class="lg-section-heading spaced"><span>Optical parameters</span><span class="lg-heading-line"></span></div>',
+    '<div class="lg-control-row"><label class="lg-control-label" for="lg-bezel">Bezel width</label><input class="lg-slider" id="lg-bezel" type="range" min="3" max="18" value="10" step="1"><output class="lg-control-value" id="lg-bezel-value">10 px</output></div>',
+    '<div class="lg-control-row"><label class="lg-control-label" for="lg-thickness">Glass thickness</label><input class="lg-slider" id="lg-thickness" type="range" min="20" max="240" value="150" step="5"><output class="lg-control-value" id="lg-thickness-value">150</output></div>',
+    '<div class="lg-control-row"><label class="lg-control-label" for="lg-index">Refractive index</label><input class="lg-slider" id="lg-index" type="range" min="1.1" max="2.2" value="1.5" step="0.05"><output class="lg-control-value" id="lg-index-value">1.50</output></div>',
+    '<div class="lg-control-row"><label class="lg-control-label" for="lg-refraction">Refraction scale</label><input class="lg-slider" id="lg-refraction" type="range" min="0.2" max="3.5" value="1.5" step="0.1"><output class="lg-control-value" id="lg-refraction-value">1.50</output></div>',
+    '<div class="lg-control-row"><label class="lg-control-label" for="lg-specular">Specular opacity</label><input class="lg-slider" id="lg-specular" type="range" min="0" max="1.5" value="0.7" step="0.05"><output class="lg-control-value" id="lg-specular-value">0.70</output></div>',
+    '<div class="lg-control-row"><label class="lg-control-label" for="lg-optical-blur">Optical blur</label><input class="lg-slider" id="lg-optical-blur" type="range" min="0" max="3" value="0.5" step="0.1"><output class="lg-control-value" id="lg-optical-blur-value">0.5 px</output></div>',
+    '<div class="lg-actions"><button class="lg-glass-control" id="lg-reset-optical">Reset parameters</button><button class="lg-glass-control active" id="lg-render">Render glass</button></div>',
+    '</div>',
+    '</section>',
+    '<section class="lg-page" id="lg-page-appearance" hidden>',
+    '<div class="lg-controls-panel">',
+    '<div class="lg-section-heading"><span>Liquid controls</span><span class="lg-heading-line"></span></div>',
+    '<div class="lg-switch-row"><div class="lg-switch-text"><div class="lg-switch-title">Liquid refraction</div><div class="lg-switch-description">Use the generated SVG refraction filter when supported.</div></div><button class="lg-switch" id="lg-toggle-liquid" role="switch" aria-checked="true" aria-label="Liquid refraction"><span class="lg-switch-thumb"></span></button></div>',
+    '<div class="lg-switch-row"><div class="lg-switch-text"><div class="lg-switch-title">Specular highlights</div><div class="lg-switch-description">Show the light-catching edge layer.</div></div><button class="lg-switch" id="lg-toggle-specular" role="switch" aria-checked="true" aria-label="Specular highlights"><span class="lg-switch-thumb"></span></button></div>',
+    '<div class="lg-switch-row"><div class="lg-switch-text"><div class="lg-switch-title">Glass controls</div><div class="lg-switch-description">Apply glass finish to buttons and switches.</div></div><button class="lg-switch" id="lg-toggle-controls" role="switch" aria-checked="true" aria-label="Glass controls"><span class="lg-switch-thumb"></span></button></div>',
+    '<div class="lg-section-heading spaced"><span>Panel appearance</span><span class="lg-heading-line"></span></div>',
+    '<div class="lg-control-row"><label class="lg-control-label" for="lg-fallback-blur">Fallback blur</label><input class="lg-slider" id="lg-fallback-blur" type="range" min="0" max="36" value="18" step="1"><output class="lg-control-value" id="lg-fallback-blur-value">18 px</output></div>',
+    '<div class="lg-control-row"><label class="lg-control-label" for="lg-opacity">Glass tint</label><input class="lg-slider" id="lg-opacity" type="range" min="4" max="55" value="18" step="1"><output class="lg-control-value" id="lg-opacity-value">18%</output></div>',
+    '<div class="lg-control-row"><label class="lg-control-label" for="lg-radius">Corner radius</label><input class="lg-slider" id="lg-radius" type="range" min="14" max="42" value="24" step="1"><output class="lg-control-value" id="lg-radius-value">24 px</output></div>',
+    '<div class="lg-section-heading spaced"><span>Color scheme</span><span class="lg-heading-line"></span></div>',
+    '<div class="lg-surface-selector"><button class="lg-glass-control" id="lg-light">Light glass</button><button class="lg-glass-control active" id="lg-dark">Dark glass</button></div>',
+    '<div class="lg-render-status" id="lg-render-status">Starting renderer…</div>',
+    '<div class="lg-actions"><button class="lg-glass-control" id="lg-reset-all">Reset all</button><button class="lg-glass-control active" id="lg-center">Restore position</button></div>',
+    '</div>',
+    '</section>',
+    '</main>',
+    '<footer class="lg-footer"><span class="lg-status"><i class="lg-dot"></i><span id="lg-status-text">Liquid Glass renderer</span></span><span>CSS + SVG · FLOAT</span></footer>',
     '</div></section>'
   ].join("");
 
-  host.innerHTML = markup;
+  const shadowStyle = document.createElement("style");
+  shadow.appendChild(shadowStyle);
+  shadowStyle.textContent = cssText;
+  const markupContainer = document.createElement("div");
+  markupContainer.innerHTML = markup;
+  shadow.appendChild(markupContainer);
 
-  const style = document.createElement("style");
-  style.id = STYLE_ID;
-  const prefix = "#" + ID;
-  style.textContent = [
-    prefix+" .cg-window{--bg-primary:#f8fafc;--bg-secondary:#e7eeef;--text-primary:#1a1a2e;--text-secondary:rgba(0,0,0,.7);--border-color:rgba(0,0,0,.1);--panel-bg:rgba(255,255,255,.68);--accent:#667eea;position:relative;isolation:isolate;width:420px;max-width:calc(100vw - 24px);max-height:calc(100vh - 32px);overflow:hidden;border:1px solid var(--border-color);border-radius:16px;color:var(--text-primary);box-shadow:0 24px 80px rgba(0,0,0,.32),inset 0 1px rgba(255,255,255,.12);pointer-events:auto}",
-    prefix+" .cg-glass-surface{position:absolute;inset:0;z-index:0;pointer-events:none;border-radius:inherit;border:1px solid rgba(255,255,255,.16);background:var(--panel-bg);backdrop-filter:blur(var(--cg-fallback-blur,18px)) saturate(145%);-webkit-backdrop-filter:blur(var(--cg-fallback-blur,18px)) saturate(145%)}",
-    prefix+" .cg-window.cg-native .cg-glass-surface{backdrop-filter:url(#coneui-liquid-filter);-webkit-backdrop-filter:url(#coneui-liquid-filter)}",
-    prefix+" .cg-filter-defs{position:absolute;width:0;height:0;overflow:hidden;pointer-events:none}",
-    prefix+" .cg-content{position:relative;z-index:1;display:flex;flex-direction:column;max-height:calc(100vh - 34px)}",
-    prefix+" .cg-header{height:58px;flex-shrink:0;display:flex;align-items:center;gap:11px;padding:0 15px;border-bottom:1px solid var(--border-color);background:linear-gradient(120deg,rgba(255,255,255,.12),transparent 72%);cursor:move;user-select:none}",
-    prefix+" .cg-mark{width:31px;height:31px;display:grid;place-items:center;border-radius:11px;border:1px solid rgba(255,255,255,.32);background:linear-gradient(145deg,rgba(255,255,255,.38),rgba(255,255,255,.04));box-shadow:inset 0 1px rgba(255,255,255,.4);font-size:16px}",
-    prefix+" .cg-heading{min-width:0}"+prefix+" .cg-title{font-size:14px;font-weight:750;letter-spacing:-.2px}"+prefix+" .cg-subtitle{font-size:10px;color:var(--text-secondary);margin-top:2px}"+prefix+" .cg-spacer{flex:1}",
-    prefix+" button{font:inherit;color:inherit;cursor:pointer}",
-    prefix+" .cg-icon-button{width:29px;height:29px;display:grid;place-items:center;border-radius:9px;border:1px solid var(--border-color);background:rgba(255,255,255,.08);font-size:16px}",
-    prefix+" .cg-icon-button:hover,"+prefix+" .cg-action-button:hover{background:rgba(255,255,255,.18)}",
-    prefix+" .cg-tabs{display:flex;gap:4px;padding:10px 14px 0;flex-shrink:0}",
-    prefix+" .cg-tab{border:1px solid transparent;background:transparent;color:var(--text-secondary);border-radius:8px;padding:8px 13px;font-size:11px}",
-    prefix+" .cg-tab.cg-active{color:var(--text-primary);background:rgba(255,255,255,.16);border-color:var(--border-color)}",
-    prefix+" .cg-main{overflow:auto;min-height:0;max-height:calc(100vh - 145px);padding:15px}",
-    prefix+" .cg-page[hidden]{display:none!important}",
-    prefix+" .cg-intro{display:flex;align-items:flex-start;gap:11px;margin-bottom:14px;padding:12px;border:1px solid rgba(102,126,234,.22);border-radius:12px;background:linear-gradient(135deg,rgba(102,126,234,.10),rgba(118,75,162,.10))}",
-    prefix+" .cg-intro-icon{width:28px;height:28px;flex-shrink:0;display:grid;place-items:center;border-radius:9px;background:linear-gradient(135deg,#667eea,#764ba2);color:white;font-size:16px}",
-    prefix+" .cg-intro-title{font-size:12px;font-weight:650;margin-bottom:3px}"+prefix+" .cg-intro-copy{font-size:10px;line-height:1.5;color:var(--text-secondary)}",
-    prefix+" .cg-controls-panel{background:var(--panel-bg);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-radius:12px;border:1px solid var(--border-color);padding:16px}",
-    prefix+" .cg-controls-header{display:flex;align-items:center;gap:1rem;margin-bottom:14px}",
-    prefix+" .cg-controls-header-text{text-transform:uppercase;letter-spacing:.14em;font-size:10px;opacity:.7}"+prefix+" .cg-controls-header-line{flex:1;height:1px;background:var(--border-color)}"+prefix+" .cg-spaced{margin-top:22px}",
-    prefix+" .cg-control-row{display:flex;align-items:center;gap:12px;margin-bottom:15px}"+prefix+" .cg-control-row:last-child{margin-bottom:0}",
-    prefix+" .cg-control-label{width:128px;text-transform:uppercase;letter-spacing:.06em;font-size:10px;opacity:.84;flex-shrink:0}",
-    prefix+" .cg-control-value{width:45px;text-align:right;font-family:'SF Mono',Monaco,'Cascadia Code',monospace;font-size:10px;opacity:.65;font-variant-numeric:tabular-nums;flex-shrink:0}",
-    prefix+" .cg-control-slider{flex:1;min-width:35px;-webkit-appearance:none;appearance:none;height:2px;background:rgba(128,128,128,.26);border-radius:1px;outline:none}",
-    prefix+" .cg-control-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:14px;height:14px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);cursor:pointer;transition:transform .15s ease}",
-    prefix+" .cg-control-slider::-webkit-slider-thumb:hover{transform:scale(1.18)}"+prefix+" .cg-control-slider::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:linear-gradient(135deg,#667eea,#764ba2);cursor:pointer;border:0}",
-    prefix+" .cg-surface-selector{display:flex;gap:7px;flex-wrap:wrap}",
-    prefix+" .cg-surface-btn{flex:1;min-width:110px;padding:8px 9px;border:1px solid var(--border-color);border-radius:8px;background:transparent;color:var(--text-primary);font-size:10px;cursor:pointer;transition:all .15s ease}",
-    prefix+" .cg-surface-btn:hover{background:rgba(102,126,234,.1);border-color:#667eea}"+prefix+" .cg-surface-btn.cg-active{background:linear-gradient(135deg,#667eea,#764ba2);color:white;border-color:transparent}",
-    prefix+" .cg-actions{display:flex;gap:8px;margin-top:16px}"+prefix+" .cg-action-button{flex:1;padding:9px 10px;border:1px solid var(--border-color);border-radius:8px;background:rgba(255,255,255,.06);font-size:10px}",
-    prefix+" .cg-action-button.cg-primary{background:linear-gradient(135deg,#667eea,#764ba2);border-color:transparent;color:#fff}",
-    prefix+" .cg-render-status{margin-top:16px;padding:10px 11px;border-radius:9px;border:1px solid var(--border-color);background:rgba(255,255,255,.05);font-size:10px;line-height:1.5;color:var(--text-secondary)}",
-    prefix+" .cg-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 15px;border-top:1px solid var(--border-color);font-size:9px;color:var(--text-secondary);flex-shrink:0}",
-    prefix+" .cg-status{display:flex;align-items:center;gap:6px}"+prefix+" .cg-dot{height:6px;width:6px;border-radius:50%;background:#76ddb1;box-shadow:0 0 8px #76ddb177}",
-    prefix+" .cg-light .cg-window{--bg-primary:#f8fafc;--bg-secondary:#e7eeef;--text-primary:#1a1a2e;--text-secondary:rgba(0,0,0,.7);--border-color:rgba(0,0,0,.1);--panel-bg:rgba(255,255,255,.68)}",
-    prefix+".cg-light .cg-window{--bg-primary:#f8fafc;--bg-secondary:#e7eeef;--text-primary:#1a1a2e;--text-secondary:rgba(0,0,0,.7);--border-color:rgba(0,0,0,.1);--panel-bg:rgba(255,255,255,.68)}",
-    prefix+".cg-light .cg-header{background:linear-gradient(120deg,rgba(255,255,255,.55),transparent 72%)}",
-    prefix+".cg-light .cg-icon-button,"+prefix+".cg-light .cg-action-button{background:rgba(255,255,255,.22)}",
-    prefix+" .cg-hidden{display:none!important}",
-    "@media(max-width:500px){"+prefix+" .cg-window{width:calc(100vw - 16px);max-width:calc(100vw - 16px)}"+prefix+" .cg-control-label{width:105px;font-size:9px}"+prefix+" .cg-control-row{gap:8px}"+prefix+" .cg-main{padding:12px}"+prefix+" .cg-controls-panel{padding:12px}}",
-    "@media(prefers-reduced-motion:reduce){"+prefix+" *{scroll-behavior:auto!important;transition:none!important}}"
-  ].join("\n");
-  document.head.appendChild(style);
-  document.documentElement.appendChild(host);
+  const $ = id => shadow.getElementById(id);
+  const root = $("lg-root");
+  const backdrop = $("lg-backdrop");
 
-  const $ = id => host.querySelector("#" + id);
-  const panel = $("cg-window");
-  const surface = $("cg-glass-surface");
-  const state = { surfaceType:"convex_squircle", bezelWidth:10, glassThickness:150, refractiveIndex:1.5, refractionScale:1.5, specularOpacity:.7, blur:.5, uiBlur:18, opacity:18, radius:24, theme:"light" };
-  const clamp = (n,a,b) => Math.max(a,Math.min(b,n));
-  const SurfaceEquations = {
+  const state = {
+    surfaceType:"convex_squircle",
+    bezelWidth:10,
+    glassThickness:150,
+    refractiveIndex:1.5,
+    refractionScale:1.5,
+    specularOpacity:.7,
+    blur:.5,
+    uiBlur:18,
+    opacity:18,
+    radius:24,
+    theme:"dark",
+    liquid:true,
+    specular:true,
+    glassControls:true
+  };
+  const clamp = (v,min,max) => Math.max(min,Math.min(max,v));
+  const profiles = {
     convex_circle:x=>Math.sqrt(Math.max(0,1-Math.pow(1-x,2))),
     convex_squircle:x=>Math.pow(Math.max(0,1-Math.pow(1-x,4)),.25),
     concave:x=>1-Math.sqrt(Math.max(0,1-x*x)),
-    lip:x=>{const c=Math.pow(Math.max(0,1-Math.pow(1-Math.min(x*2,1),4)),.25);const n=1-Math.sqrt(Math.max(0,1-Math.pow(1-x,2)))+.1;const t=6*Math.pow(x,5)-15*Math.pow(x,4)+10*Math.pow(x,3);return c*(1-t)+n*t;}
+    lip:x=>{
+      const convex=Math.pow(Math.max(0,1-Math.pow(1-Math.min(x*2,1),4)),.25);
+      const concave=1-Math.sqrt(Math.max(0,1-Math.pow(1-x,2)))+.1;
+      const t=6*Math.pow(x,5)-15*Math.pow(x,4)+10*Math.pow(x,3);
+      return convex*(1-t)+concave*t;
+    }
   };
-  function dataURL(imageData){const c=document.createElement("canvas");c.width=imageData.width;c.height=imageData.height;c.getContext("2d").putImageData(imageData,0,0);return c.toDataURL("image/png");}
-  function displacement1D(){const eta=1/state.refractiveIndex,fn=SurfaceEquations[state.surfaceType],out=[];for(let i=0;i<128;i++){const x=i/128,y=fn(x),dx=x<1?.0001:-.0001,x2=clamp(x+dx,0,1),der=(fn(x2)-y)/(x2-x||dx),mag=Math.sqrt(der*der+1),nx=-der/mag,ny=-1/mag,dot=ny,k=1-eta*eta*(1-dot*dot);if(k<0){out.push(0);continue;}const root=Math.sqrt(k),rx=-(eta*dot+root)*nx,ry=eta-(eta*dot+root)*ny;if(!Number.isFinite(rx)||!Number.isFinite(ry)||Math.abs(ry)<.00001){out.push(0);continue;}out.push(clamp(rx*((y*state.bezelWidth+state.glassThickness)/ry),-1000,1000));}return out;}
-  function buildMap(width,height,profile){const w=Math.max(1,Math.round(width*.5)),h=Math.max(1,Math.round(height*.5)),c=document.createElement("canvas");c.width=w;c.height=h;const ctx=c.getContext("2d",{willReadFrequently:true}),im=ctx.createImageData(w,h);for(let i=0;i<im.data.length;i+=4){im.data[i]=128;im.data[i+1]=128;im.data[i+3]=255;}const r=Math.min(state.radius*.5,h/2,w/2),r2=r*r,plus=(r+1)*(r+1),inner=Math.max(0,(r-state.bezelWidth*.5)*(r-state.bezelWidth*.5)),gx=w-2*r,gy=h-2*r,max=Math.max(1,...profile.map(Math.abs));for(let y=0;y<h;y++){for(let x=0;x<w;x++){const px=x<r?x-r:x>=w-r?x-r-gx:0,py=y<r?y-r:y>=h-r?y-r-gy:0,d2=px*px+py*py;if(d2>plus||d2<inner)continue;const d=Math.sqrt(d2),opacity=d2<r2?1:1-(d-r)/(Math.sqrt(plus)-r),ratio=clamp((r-d)/Math.max(1,state.bezelWidth*.5),0,1),idx=clamp(Math.floor(ratio*profile.length),0,profile.length-1),disp=profile[idx]||0,dx=-(d>0?px/d:0)*disp/max,dy=-(d>0?py/d:0)*disp/max,o=(y*w+x)*4;im.data[o]=clamp(128+dx*127*opacity,0,255);im.data[o+1]=clamp(128+dy*127*opacity,0,255);}}return {im,w,h};}
-  function buildSpecular(width,height){const w=Math.max(1,Math.round(width*.5)),h=Math.max(1,Math.round(height*.5)),c=document.createElement("canvas");c.width=w;c.height=h;const ctx=c.getContext("2d",{willReadFrequently:true}),im=ctx.createImageData(w,h),r=Math.min(state.radius*.5,h/2,w/2),plus=(r+1)*(r+1),inner=Math.max(0,(r-1.5)*(r-1.5)),gx=w-2*r,gy=h-2*r,vx=Math.cos(Math.PI/3),vy=Math.sin(Math.PI/3);for(let y=0;y<h;y++){for(let x=0;x<w;x++){const px=x<r?x-r:x>=w-r?x-r-gx:0,py=y<r?y-r:y>=h-r?y-r-gy:0,d2=px*px+py*py;if(d2>plus||d2<inner)continue;const d=Math.sqrt(d2),opacity=d2<r*r?1:1-(d-r)/(Math.sqrt(plus)-r),cos=d>0?px/d:0,sin=d>0?-py/d:0,dot=Math.abs(cos*vx+sin*vy),edge=clamp((r-d)/1.5,0,1),fall=Math.sqrt(Math.max(0,1-Math.pow(1-edge,2))),co=dot*fall,col=Math.min(255,255*co),alpha=Math.min(255,col*co*opacity),o=(y*w+x)*4;im.data[o]=col;im.data[o+1]=col;im.data[o+2]=col;im.data[o+3]=alpha;}}return {im,w,h};}
-  let frame=0;
-  function render(){if(frame)cancelAnimationFrame(frame);frame=requestAnimationFrame(()=>{frame=0;const w=Math.max(120,panel.clientWidth),h=Math.max(160,panel.clientHeight);state.radius=clamp(state.radius,14,Math.floor(Math.min(w,h)/2));const profile=displacement1D(),map=buildMap(w,h,profile),spec=buildSpecular(w,h),di=$("cg-displacement-image"),si=$("cg-specular-image");di.setAttribute("href",dataURL(map.im));di.setAttribute("width",map.w);di.setAttribute("height",map.h);si.setAttribute("href",dataURL(spec.im));si.setAttribute("width",spec.w);si.setAttribute("height",spec.h);$("cg-displacement-filter").setAttribute("scale",Math.max(...profile.map(Math.abs))*state.refractionScale);$("cg-filter-blur").setAttribute("stdDeviation",state.blur);$("cg-specular-alpha").setAttribute("slope",state.specularOpacity);updateAppearance();});}
-  function updateAppearance(){panel.style.setProperty("--cg-fallback-blur",state.uiBlur+"px");panel.style.setProperty("--panel-bg",state.theme==="dark"?"rgba(30,30,40,"+(state.opacity/100)+")":"rgba(255,255,255,"+(state.opacity/100)+")");panel.style.borderRadius=state.radius+"px";surface.style.borderRadius=state.radius+"px";}
-  function showVal(id,suffix,digits){const v=Number($(id).value);$(id+"-value").textContent=(digits===undefined?String(v):v.toFixed(digits))+suffix;}
-  const controls=[["cg-bezel"," px",0,"bezelWidth"],["cg-thickness","",0,"glassThickness"],["cg-index","",2,"refractiveIndex"],["cg-refraction","",2,"refractionScale"],["cg-specular","",2,"specularOpacity"],["cg-blur","",1,"blur"]];
-  controls.forEach(([id,suffix,digits,key])=>$(id).addEventListener("input",()=>{state[key]=Number($(id).value);if(key==="bezelWidth")state.bezelWidth=clamp(state.bezelWidth,3,Math.floor(state.radius/2));showVal(id,suffix,digits);render();}));
-  $("cg-ui-blur").addEventListener("input",()=>{state.uiBlur=Number($("cg-ui-blur").value);showVal("cg-ui-blur"," px",0);updateAppearance();});
-  $("cg-opacity").addEventListener("input",()=>{state.opacity=Number($("cg-opacity").value);showVal("cg-opacity","%",0);updateAppearance();});
-  $("cg-radius").addEventListener("input",()=>{state.radius=Number($("cg-radius").value);showVal("cg-radius"," px",0);render();});
-  host.querySelectorAll("[data-surface]").forEach(b=>b.addEventListener("click",()=>{host.querySelectorAll("[data-surface]").forEach(x=>x.classList.toggle("cg-active",x===b));state.surfaceType=b.dataset.surface;render();}));
-  function theme(t){state.theme=t;host.classList.toggle("cg-light",t==="light");$("cg-dark").classList.toggle("cg-active",t==="dark");$("cg-light").classList.toggle("cg-active",t==="light");updateAppearance();}
-  $("cg-dark").onclick=()=>theme("dark");$("cg-light").onclick=()=>theme("light");
-  function page(p){$("cg-page-material").hidden=p!=="material";$("cg-page-appearance").hidden=p!=="appearance";host.querySelectorAll("[data-page]").forEach(t=>t.classList.toggle("cg-active",t.dataset.page===p));}
-  host.querySelectorAll("[data-page]").forEach(t=>t.onclick=()=>page(t.dataset.page));
-  $("cg-min").onclick=()=>{const off=!$("cg-main").classList.contains("cg-hidden");$("cg-main").classList.toggle("cg-hidden",off);host.querySelector(".cg-tabs").classList.toggle("cg-hidden",off);$("cg-min").textContent=off?"+":"−";render();};
-  $("cg-close").onclick=()=>{host.remove();style.remove();};
-  function resetOptical(){const d={"cg-bezel":10,"cg-thickness":150,"cg-index":1.5,"cg-refraction":1.5,"cg-specular":.7,"cg-blur":.5};controls.forEach(([id,suf,dig,key])=>{$(id).value=d[id];state[key]=d[id];showVal(id,suf,dig);});state.surfaceType="convex_squircle";host.querySelectorAll("[data-surface]").forEach(b=>b.classList.toggle("cg-active",b.dataset.surface==="convex_squircle"));render();}
-  $("cg-reset-optical").onclick=resetOptical;$("cg-rerender").onclick=render;
-  $("cg-reset-all").onclick=()=>{resetOptical();$("cg-ui-blur").value=18;$("cg-opacity").value=18;$("cg-radius").value=24;state.uiBlur=18;state.opacity=18;state.radius=24;showVal("cg-ui-blur"," px",0);showVal("cg-opacity","%",0);showVal("cg-radius"," px",0);theme("light");render();};
-  $("cg-center").onclick=()=>{host.style.left="";host.style.top="24px";host.style.right="24px";};
-  let moving=false,ox=0,oy=0;
-  $("cg-drag").addEventListener("pointerdown",e=>{if(e.target.closest("button"))return;const r=host.getBoundingClientRect();moving=true;ox=e.clientX-r.left;oy=e.clientY-r.top;$("cg-drag").setPointerCapture(e.pointerId);});
-  $("cg-drag").addEventListener("pointermove",e=>{if(!moving)return;host.style.left=clamp(e.clientX-ox,0,innerWidth-host.offsetWidth)+"px";host.style.top=clamp(e.clientY-oy,0,innerHeight-40)+"px";host.style.right="auto";});
-  $("cg-drag").addEventListener("pointerup",()=>moving=false);$("cg-drag").addEventListener("pointercancel",()=>moving=false);
 
-  const probe=document.createElement("div");probe.style.backdropFilter="url(#coneui-liquid-filter)";
-  const native=!!window.chrome&&probe.style.backdropFilter.includes("url");
-  if(native){panel.classList.add("cg-native");$("cg-status-text").textContent="SVG Liquid Glass selected";$("cg-render-status").textContent="Using the original demo's SVG filter approach: displacement map, specular layer and edge refraction, rendered onto this floating panel.";}
-  else{$("cg-status-text").textContent="Blur fallback";$("cg-render-status").textContent="This Chrome build does not expose SVG backdrop-filter. The same interface and controls remain, with CSS blur as a fallback.";}
-  theme("light");
-  const ro=new ResizeObserver(render);ro.observe(panel);
-  render();
-  console.info("ConeUI Liquid Glass UI loaded: adapted from the CSS and SVG refraction method in winaviation/liquid-glass-demo. No page, React app or iframe is embedded.");
+  function makeDataURL(imageData) {
+    const canvas=document.createElement("canvas");
+    canvas.width=imageData.width;
+    canvas.height=imageData.height;
+    canvas.getContext("2d").putImageData(imageData,0,0);
+    return canvas.toDataURL("image/png");
+  }
+
+  function makeDisplacement1D() {
+    const fn=profiles[state.surfaceType], eta=1/state.refractiveIndex, out=[];
+    for(let i=0;i<128;i++){
+      const x=i/128,y=fn(x),dx=x<1?.0001:-.0001,x2=clamp(x+dx,0,1);
+      const derivative=(fn(x2)-y)/(x2-x||dx),mag=Math.sqrt(derivative*derivative+1);
+      const nx=-derivative/mag,ny=-1/mag,dot=ny,k=1-eta*eta*(1-dot*dot);
+      if(k<0){out.push(0);continue;}
+      const q=Math.sqrt(k),rx=-(eta*dot+q)*nx,ry=eta-(eta*dot+q)*ny;
+      if(!Number.isFinite(rx)||!Number.isFinite(ry)||Math.abs(ry)<.00001){out.push(0);continue;}
+      out.push(clamp(rx*((y*state.bezelWidth+state.glassThickness)/ry),-1000,1000));
+    }
+    return out;
+  }
+
+  function makeDisplacementMap(width,height,profile,rounded) {
+    const w=Math.max(1,Math.min(300,Math.round(width*.42)));
+    const h=Math.max(1,Math.min(500,Math.round(height*.42)));
+    const canvas=document.createElement("canvas");canvas.width=w;canvas.height=h;
+    const ctx=canvas.getContext("2d",{willReadFrequently:true}),image=ctx.createImageData(w,h);
+    for(let i=0;i<image.data.length;i+=4){image.data[i]=128;image.data[i+1]=128;image.data[i+3]=255;}
+    const radius=Math.min(state.radius*(w/width),h/2,w/2);
+    const radius2=radius*radius,plus=(radius+1)*(radius+1);
+    const inner=Math.max(0,(radius-state.bezelWidth*(w/width))*(radius-state.bezelWidth*(w/width)));
+    const gapX=w-2*radius,gapY=h-2*radius;
+    const maxDisplacement=Math.max(1,...profile.map(Math.abs));
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        const px=x<radius?x-radius:x>=w-radius?x-radius-gapX:0;
+        const py=y<radius?y-radius:y>=h-radius?y-radius-gapY:0;
+        const d2=px*px+py*py;
+        if(d2>plus||d2<inner)continue;
+        const d=Math.sqrt(d2),opacity=d2<radius2?1:1-(d-radius)/(Math.sqrt(plus)-radius);
+        const ratio=clamp((radius-d)/Math.max(.5,state.bezelWidth*(w/width)),0,1);
+        const index=clamp(Math.floor(ratio*profile.length),0,profile.length-1);
+        const distance=profile[index]||0,dx=-(d>0?px/d:0)*distance/maxDisplacement,dy=-(d>0?py/d:0)*distance/maxDisplacement,offset=(y*w+x)*4;
+        image.data[offset]=clamp(128+dx*127*opacity,0,255);
+        image.data[offset+1]=clamp(128+dy*127*opacity,0,255);
+      }
+    }
+    return {image,w,h};
+  }
+
+  function makeSpecularMap(width,height) {
+    const w=Math.max(1,Math.min(300,Math.round(width*.42)));
+    const h=Math.max(1,Math.min(500,Math.round(height*.42)));
+    const canvas=document.createElement("canvas");canvas.width=w;canvas.height=h;
+    const ctx=canvas.getContext("2d",{willReadFrequently:true}),image=ctx.createImageData(w,h);
+    const radius=Math.min(state.radius*(w/width),h/2,w/2),plus=(radius+1)*(radius+1),inner=Math.max(0,(radius-1.5)*(radius-1.5));
+    const gapX=w-2*radius,gapY=h-2*radius,vx=Math.cos(Math.PI/3),vy=Math.sin(Math.PI/3);
+    for(let y=0;y<h;y++){
+      for(let x=0;x<w;x++){
+        const px=x<radius?x-radius:x>=w-radius?x-radius-gapX:0;
+        const py=y<radius?y-radius:y>=h-radius?y-radius-gapY:0;
+        const d2=px*px+py*py;
+        if(d2>plus||d2<inner)continue;
+        const d=Math.sqrt(d2),opacity=d2<radius*radius?1:1-(d-radius)/(Math.sqrt(plus)-radius);
+        const co=Math.abs((d>0?px/d:0)*vx+(d>0?-py/d:0)*vy);
+        const edge=clamp((radius-d)/1.5,0,1),fall=Math.sqrt(Math.max(0,1-Math.pow(1-edge,2))),strength=co*fall;
+        const color=Math.min(255,255*strength),alpha=Math.min(255,color*strength*opacity),offset=(y*w+x)*4;
+        image.data[offset]=color;image.data[offset+1]=color;image.data[offset+2]=color;image.data[offset+3]=alpha;
+      }
+    }
+    return {image,w,h};
+  }
+
+  let renderId=0;
+  function renderGlass(force) {
+    if(renderId)cancelAnimationFrame(renderId);
+    renderId=requestAnimationFrame(()=>{
+      renderId=0;
+      const rect=root.getBoundingClientRect();
+      const width=Math.max(120,Math.round(rect.width));
+      const height=Math.max(160,Math.round(rect.height));
+      const profile=makeDisplacement1D();
+      const disp=makeDisplacementMap(width,height,profile,true);
+      const spec=makeSpecularMap(width,height);
+      const d=$("cg-main-displacement-image"),s=$("cg-main-specular-image");
+      d.setAttribute("href",makeDataURL(disp.image));
+      s.setAttribute("href",makeDataURL(spec.image));
+      d.setAttribute("width",String(disp.w));d.setAttribute("height",String(disp.h));
+      s.setAttribute("width",String(spec.w));s.setAttribute("height",String(spec.h));
+      $("cg-displacement-filter").setAttribute("scale",String(Math.max(...profile.map(Math.abs))*state.refractionScale));
+      $("cg-main-blur").setAttribute("stdDeviation",String(state.blur));
+      $("cg-main-specular-alpha").setAttribute("slope",String(state.specular?state.specularOpacity:0));
+      const capsule=makeDisplacementMap(160,56,profile,true);
+      const capsuleSpec=makeSpecularMap(160,56);
+      $("cg-control-displacement-image").setAttribute("href",makeDataURL(capsule.image));
+      $("cg-control-specular-image").setAttribute("href",makeDataURL(capsuleSpec.image));
+      $("cg-control-displacement-image").setAttribute("width",String(capsule.w));$("cg-control-displacement-image").setAttribute("height",String(capsule.h));
+      $("cg-control-specular-image").setAttribute("width",String(capsuleSpec.w));$("cg-control-specular-image").setAttribute("height",String(capsuleSpec.h));
+      $("cg-control-liquid-filter").setAttribute("color-interpolation-filters","sRGB");
+      $("cg-status-text").textContent=state.liquid?(nativeSupport?"SVG liquid glass enabled":"CSS glass fallback"):"Liquid effect off";
+      $("cg-render-status").textContent=nativeSupport
+        ?(state.liquid?"SVG refraction filter enabled for the floating surface. Glass buttons and switch thumbs use their own glass styling.":"Liquid refraction is switched off; the CSS glass material remains visible.")
+        :"This Chrome build does not expose SVG backdrop-filter. The UI uses the demo-inspired CSS glass fallback; the renderer settings remain available.";
+      updateAppearance();
+    });
+  }
+
+  function updateAppearance() {
+    root.style.setProperty("--lg-blur",state.uiBlur+"px");
+    root.style.setProperty("--lg-tint",state.opacity+"%");
+    root.style.setProperty("--lg-radius",state.radius+"px");
+    root.style.setProperty("--lg-panel",state.theme==="dark"?"rgba(30,30,40,"+(state.opacity/100)+")":"rgba(255,255,255,"+(state.opacity/100)+")");
+    root.style.setProperty("--lg-text-primary",state.theme==="dark"?"#f0f0f5":"#1a1a2e");
+    root.style.setProperty("--lg-text-secondary",state.theme==="dark"?"rgba(255,255,255,.72)":"rgba(0,0,0,.68)");
+    root.style.setProperty("--lg-border",state.theme==="dark"?"rgba(255,255,255,.16)":"rgba(255,255,255,.56)");
+    root.classList.toggle("lg-dark",state.theme==="dark");
+    root.classList.toggle("lg-light",state.theme==="light");
+    root.classList.toggle("lg-native",nativeSupport&&state.liquid);
+    root.classList.toggle("lg-no-control-glass",!state.glassControls);
+    $("cg-main-specular-alpha").setAttribute("slope",String(state.specular?state.specularOpacity:0));
+  }
+
+  function displayValue(id,suffix,digits) {
+    const n=Number($(id).value);
+    $(id+"-value").textContent=(digits===undefined?String(n):n.toFixed(digits))+suffix;
+  }
+
+  const controls=[
+    ["cg-bezel"," px",0,"bezelWidth"],
+    ["cg-thickness","",0,"glassThickness"],
+    ["cg-index","",2,"refractiveIndex"],
+    ["cg-refraction","",2,"refractionScale"],
+    ["cg-specular","",2,"specularOpacity"],
+    ["cg-optical-blur"," px",1,"blur"]
+  ];
+  controls.forEach(([id,suffix,digits,key])=>{
+    $(id).addEventListener("input",()=>{
+      state[key]=Number($(id).value);
+      displayValue(id,suffix,digits);
+      renderGlass(true);
+    });
+  });
+  $("cg-fallback-blur").addEventListener("input",()=>{state.uiBlur=Number($("cg-fallback-blur").value);displayValue("cg-fallback-blur"," px",0);updateAppearance();});
+  $("cg-opacity").addEventListener("input",()=>{state.opacity=Number($("cg-opacity").value);displayValue("cg-opacity","%",0);updateAppearance();});
+  $("cg-radius").addEventListener("input",()=>{state.radius=Number($("cg-radius").value);displayValue("cg-radius"," px",0);renderGlass(true);});
+
+  function setSwitch(id,on) {
+    const el=$(id);
+    el.setAttribute("aria-checked",String(!!on));
+    if(id==="lg-toggle-liquid")state.liquid=!!on;
+    if(id==="lg-toggle-specular")state.specular=!!on;
+    if(id==="lg-toggle-controls")state.glassControls=!!on;
+    updateAppearance();
+    if(id!=="lg-toggle-controls")renderGlass(true);
+  }
+  [["lg-toggle-liquid",true],["lg-toggle-specular",true],["lg-toggle-controls",true]].forEach(([id,defaultValue])=>{
+    setSwitch(id,defaultValue);
+    const el=$(id);
+    el.addEventListener("click",()=>setSwitch(id,el.getAttribute("aria-checked")!=="true"));
+    let startX=0,moved=false;
+    const thumb=el.querySelector(".lg-switch-thumb");
+    thumb.addEventListener("pointerdown",e=>{startX=e.clientX;moved=false;thumb.setPointerCapture(e.pointerId);});
+    thumb.addEventListener("pointermove",e=>{if(Math.abs(e.clientX-startX)>3)moved=true;});
+    thumb.addEventListener("pointerup",e=>{
+      if(!moved)return;
+      e.preventDefault();
+      const r=el.getBoundingClientRect();
+      setSwitch(id,e.clientX>r.left+r.width/2);
+      el.dataset.dragCompleted="1";
+    });
+  });
+
+  host.querySelectorAll("[data-surface]").forEach(button=>button.addEventListener("click",()=>{
+    host.querySelectorAll("[data-surface]").forEach(item=>item.classList.toggle("active",item===button));
+    state.surfaceType=button.dataset.surface;
+    renderGlass(true);
+  }));
+
+  function setTheme(theme) {
+    state.theme=theme;
+    $("lg-dark").classList.toggle("active",theme==="dark");
+    $("lg-light").classList.toggle("active",theme==="light");
+    updateAppearance();
+  }
+  $("lg-dark").onclick=()=>setTheme("dark");
+  $("lg-light").onclick=()=>setTheme("light");
+
+  function showPage(name) {
+    $("lg-page-material").hidden=name!=="material";
+    $("lg-page-appearance").hidden=name!=="appearance";
+    host.querySelectorAll("[data-page]").forEach(tab=>tab.classList.toggle("active",tab.dataset.page===name));
+  }
+  host.querySelectorAll("[data-page]").forEach(tab=>tab.addEventListener("click",()=>showPage(tab.dataset.page)));
+
+  $("lg-min").onclick=()=>{
+    const collapsed=root.classList.toggle("lg-collapsed");
+    $("lg-min").textContent=collapsed?"+":"−";
+    requestAnimationFrame(()=>renderGlass(true));
+  };
+  $("lg-close").onclick=()=>{observer.disconnect();host.remove();};
+
+  function resetOptical() {
+    const defaults={"cg-bezel":10,"cg-thickness":150,"cg-index":1.5,"cg-refraction":1.5,"cg-specular":.7,"cg-optical-blur":.5};
+    controls.forEach(([id,suffix,digits,key])=>{$(id).value=defaults[id];state[key]=defaults[id];displayValue(id,suffix,digits);});
+    state.surfaceType="convex_squircle";
+    host.querySelectorAll("[data-surface]").forEach(b=>b.classList.toggle("active",b.dataset.surface==="convex_squircle"));
+    renderGlass(true);
+  }
+  $("lg-reset-optical").onclick=resetOptical;
+  $("lg-render").onclick=()=>renderGlass(true);
+  $("lg-reset-all").onclick=()=>{
+    resetOptical();
+    $("lg-fallback-blur").value="18";$("lg-opacity").value="18";$("lg-radius").value="24";
+    state.uiBlur=18;state.opacity=18;state.radius=24;
+    displayValue("lg-fallback-blur"," px",0);displayValue("lg-opacity","%",0);displayValue("lg-radius"," px",0);
+    setSwitch("lg-toggle-liquid",true);setSwitch("lg-toggle-specular",true);setSwitch("lg-toggle-controls",true);setTheme("dark");renderGlass(true);
+  };
+  $("lg-center").onclick=()=>{host.style.left="";host.style.top="24px";host.style.right="24px";host.style.bottom="auto";};
+
+  let dragging=false,dragX=0,dragY=0;
+  $("lg-drag").addEventListener("pointerdown",e=>{
+    if(e.target.closest("button"))return;
+    const rect=host.getBoundingClientRect();dragging=true;dragX=e.clientX-rect.left;dragY=e.clientY-rect.top;
+    $("lg-drag").setPointerCapture(e.pointerId);
+  });
+  $("lg-drag").addEventListener("pointermove",e=>{
+    if(!dragging)return;
+    host.style.left=clamp(e.clientX-dragX,0,innerWidth-host.offsetWidth)+"px";
+    host.style.top=clamp(e.clientY-dragY,0,innerHeight-host.offsetHeight)+"px";
+    host.style.right="auto";host.style.bottom="auto";
+  });
+  $("lg-drag").addEventListener("pointerup",()=>dragging=false);
+  $("lg-drag").addEventListener("pointercancel",()=>dragging=false);
+
+  const probe=document.createElement("div");
+  probe.style.backdropFilter="url(#cg-liquid-filter)";
+  const nativeSupport=!!window.chrome&&probe.style.backdropFilter.includes("url");
+  let observer;
+  themeDefaults();
+  function themeDefaults(){setTheme("dark");}
+  observer=new ResizeObserver(()=>renderGlass(true));
+  observer.observe(root);
+  renderGlass(true);
+  console.info("ConeUI Liquid Glass: separated CSS loaded, responsive resize enabled, glass buttons and draggable switches initialized.");
 })();
