@@ -10,6 +10,8 @@ function setStatus(message, kind = "") {
 }
 
 function scanCurrentPage() {
+  const SENSITIVE_NAME = /(token|secret|password|passwd|auth|session|cookie|csrf|xsrf|api.?key|signature|credential|jwt|bearer|access.?key|client.?key)/i;
+  const API_PATH = /(^|\\/)(api|graphql|oauth|auth|v\\d+|rest|rpc|accounts|users)(\\/|$)/i;
   const found = new Map();
   const checks = [
     ["Provider/API key pattern", /\b(?:sk_live|sk_test|ghp|github_pat|glpat|xox[baprs]|AKIA|AIza)[-_A-Za-z0-9]{12,}\b/g],
