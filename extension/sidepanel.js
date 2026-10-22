@@ -232,3 +232,152 @@ chrome.tabs.query({ active: true, lastFocusedWindow: true }).then((tabs) => {
     try { $("#pageOrigin").textContent = new URL(tab.url).origin; } catch {}
   }
 });
+
+const consoleRuntime = {
+  frameReady: false,
+  nextRunId: 1,
+  activeRunId: null,
+  queuedRun: null,
+  outputCount: 0
+};
+
+function consoleOutput(text, level = "log") {
+  const output = $("#consoleOutput");
+  const line = document.createElement("div");
+  line.className = "console-line" + (level === "error" ? " error-line" : level === "warn" ? " warn-line" : level === "result" ? " result-line" : "");
+  line.textContent = String(text);
+  output.append(line);
+  consoleRuntime.outputCount++;
+  while (output.children.length > 600) output.firstElementChild.remove();
+  output.scrollTop = output.scrollHeight;
+}
+
+function clearConsoleOutput() {
+  $("#consoleOutput").replaceChildren();
+  consoleRuntime.outputCount = 0;
+}
+
+function prepareConsoleSandbox() {
+  const frame = $("#consoleSandbox");
+  frame.addEventListener("load", () => {
+    consoleRuntime.frameReady = true;
+    $("#consoleRunStatus").textContent = "Sandbox ready";
+    if (consoleRuntime.queuedRun) {
+      const queued = consoleRuntime.queuedRun;
+      consoleRuntime.queuedRun = null;
+      sendConsoleCode(queued.code, queued.source);
+    }
+  });
+}
+
+function sendConsoleCode(code, source = "command") {
+  const frame = $("#consoleSandbox");
+  const runId = consoleRuntime.nextRunId++;
+  consoleRuntime.activeRunId = runId;
+  $("#consoleRunStatus").textContent = "Running…";
+  $("#runCommandButton").disabled = true;
+  $("#runFileButton").disabled = true;
+  consoleOutput("> " + source, "muted");
+  if (!code.trim()) {
+    consoleOutput("No JavaScript code to run.", "warn");
+    resetConsoleRun();
+    return;
+  }
+  if (!consoleRuntime.frameReady) {
+    consoleRuntime.queuedRun = { code, source };
+    return;
+  }
+  frame.contentWindow.postMessage({
+    serverTraceRequest: true,
+    runId,
+    code,
+    report: state.report || null
+  }, "*");
+}
+
+function resetConsoleRun() {
+  consoleRuntime.activeRunId = null;
+  $("#runCommandButton").disabled = false;
+  $("#runFileButton").disabled = false;
+  $("#consoleRunStatus").textContent = "Sandbox ready";
+}
+
+function runConsoleCommand() {
+  sendConsoleCode($("#consoleInput").value, "console command");
+}
+
+function resetSandbox() {
+  const oldFrame = $("#consoleSandbox");
+  const freshFrame = oldFrame.cloneNode(false);
+  oldFrame.replaceWith(freshFrame);
+  consoleRuntime.frameReady = false;
+  consoleRuntime.activeRunId = null;
+  consoleRuntime.queuedRun = null;
+  freshFrame.addEventListener("load", () => {
+    consoleRuntime.frameReady = true;
+    $("#consoleRunStatus").textContent = "Sandbox reset";
+  });
+  freshFrame.src = "sandbox.html";
+  $("#runCommandButton").disabled = false;
+  $("#runFileButton").disabled = false;
+}
+
+$("#runCommandButton").addEventListener("click", runConsoleCommand);
+$("#runFileButton").addEventListener("click", () => $("#consoleFileInput").click());
+$("#clearConsoleButton").addEventListener("click", () => {
+  clearConsoleOutput();
+  resetSandbox();
+  consoleOutput("Console output cleared. Sandbox reset.", "muted");
+});
+$("#consoleInput").addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+    event.preventDefault();
+    runConsoleCommand();
+  }
+});
+$("#consoleFileInput").addEventListener("change", async (event) => {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  if (file.size > 500 * 1024) {
+    consoleOutput("File is larger than the 500 KB safety limit.", "error");
+    event.target.value = "";
+    return;
+  }
+  try {
+    const source = await file.text();
+    $("#consoleInput").value = source;
+    sendConsoleCode(source, "file: " + file.name);
+  } catch (error) {
+    consoleOutput("Could not read file: " + (error?.message || error), "error");
+  } finally {
+    event.target.value = "";
+  }
+});
+
+window.addEventListener("message", (event) => {
+  const frame = $("#consoleSandbox");
+  if (event.source !== frame.contentWindow || !event.data || event.data.serverTraceSandbox !== true) return;
+  const message = event.data;
+  if (message.type === "READY") {
+    consoleRuntime.frameReady = true;
+    $("#consoleRunStatus").textContent = "Sandbox ready";
+    if (consoleRuntime.queuedRun) {
+      const queued = consoleRuntime.queuedRun;
+      consoleRuntime.queuedRun = null;
+      sendConsoleCode(queued.code, queued.source);
+    }
+    return;
+  }
+  if (message.runId !== consoleRuntime.activeRunId) return;
+  if (message.type === "START") $("#consoleRunStatus").textContent = "Running…";
+  if (message.type === "LOG") consoleOutput((message.values || []).join(" "), message.level);
+  if (message.type === "RESULT") consoleOutput(message.value, "result");
+  if (message.type === "CLEAR") clearConsoleOutput();
+  if (message.type === "ERROR") {
+    consoleOutput(message.message || "Execution failed.", "error");
+    resetConsoleRun();
+  }
+  if (message.type === "DONE") resetConsoleRun();
+});
+
+prepareConsoleSandbox();
