@@ -131,6 +131,7 @@
     });
     const baseUrl = new URL(base);
     if (!["http:", "https:"].includes(baseUrl.protocol)) throw new Error("Only HTTP and HTTPS URLs are supported.");
+    while (path.startsWith("/")) path = path.slice(1);
     const result = new URL(path, baseUrl.href.endsWith("/") ? baseUrl.href : baseUrl.href + "/");
     for (const [key,value] of readRows($("queryRows"))) result.searchParams.append(key, value);
     if (result.username || result.password) throw new Error("Credentials in the URL are not supported. Use an Authorization header.");
@@ -141,15 +142,18 @@
     return { method: $("method").value, path: $("path").value.trim() || "/", url: urlText };
   }
 
-  function buildHeaders() {
+  function buildHeaders(method) {
     const headers = new Headers();
     for (const [key,value] of readRows($("headerRows"))) {
+      if (["GET","HEAD"].includes(method) && key.toLowerCase() === "content-type") continue;
       try { headers.append(key, value); }
       catch { throw new Error("Invalid header name or value: " + key); }
     }
     const type = $("bodyType").value;
-    if (!headers.has("Content-Type") && ["json","form"].includes(type)) {
-      headers.set("Content-Type", type === "json" ? "application/json" : "application/x-www-form-urlencoded;charset=UTF-8");
+    if (!["GET","HEAD"].includes(method) && !headers.has("Content-Type")) {
+      if (type === "json") headers.set("Content-Type", "application/json");
+      if (type === "form") headers.set("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8");
+      if (type === "text") headers.set("Content-Type", "text/plain;charset=UTF-8");
     }
     return headers;
   }
@@ -234,7 +238,7 @@
     const method = $("method").value;
     let headers, body;
     try {
-      headers = buildHeaders();
+      headers = buildHeaders(method);
       body = buildBody(headers, method);
     } catch (error) {
       setConnection(error.message, true);
@@ -460,7 +464,6 @@
   }
 
   $("toggleSpec").addEventListener("click", () => $("specDrawer").hidden = !$("specDrawer").hidden);
-  $("openSpecFromEmpty").addEventListener("click", openSpecDrawer);
   $("closeSpec").addEventListener("click", () => $("specDrawer").hidden = true);
   $("loadSpecUrl").addEventListener("click", loadSpecFromUrl);
   $("parseSpec").addEventListener("click", () => {
@@ -532,6 +535,25 @@
   $("method").addEventListener("change", () => {
     const method = $("method").value;
     $("requestBody").placeholder = method === "GET" || method === "HEAD" ? "Body is not sent for this method" : '{\n  "example": true\n}';
+  });
+
+  $("bodyType").addEventListener("change", () => {
+    const builtInTypes = new Set([
+      "application/json",
+      "application/x-www-form-urlencoded;charset=utf-8",
+      "text/plain;charset=utf-8"
+    ]);
+    const row = [...$("headerRows").querySelectorAll(".kv-row")]
+      .find(item => item.querySelectorAll("input")[0].value.trim().toLowerCase() === "content-type");
+    if (!row) return;
+    const valueInput = row.querySelectorAll("input")[1];
+    if (!builtInTypes.has(valueInput.value.trim().toLowerCase())) return;
+    const types = {
+      json: "application/json",
+      form: "application/x-www-form-urlencoded;charset=UTF-8",
+      text: "text/plain;charset=UTF-8"
+    };
+    valueInput.value = types[$("bodyType").value];
   });
 
   createKvRow($("headerRows"), "Content-Type", "application/json");
