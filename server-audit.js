@@ -30,6 +30,8 @@
     try {
       const u = new URL(raw, location.href);
       if (u.protocol !== "http:" && u.protocol !== "https:") return "";
+      u.username = "";
+      u.password = "";
       const keys = Array.from(u.searchParams.keys());
       for (const key of keys) {
         if (/(token|secret|password|passwd|auth|session|cookie|csrf|xsrf|api.?key|signature|credential|jwt|bearer)/i.test(key)) u.searchParams.set(key, "[REDACTED]");
@@ -126,8 +128,9 @@
 
   function scanStorageKeys() {
     const results = [];
-    for (const [storeName, store] of [["localStorage", window.localStorage], ["sessionStorage", window.sessionStorage]]) {
+    for (const storeName of ["localStorage", "sessionStorage"]) {
       try {
+        const store = window[storeName];
         for (let i = 0; i < store.length; i++) {
           const key = store.key(i);
           if (key == null) continue;
