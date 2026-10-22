@@ -21,6 +21,7 @@
     "button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}button:disabled{opacity:.38;cursor:not-allowed}",
     "input,select,textarea{min-width:0;border:1px solid #484a50;background:#1e1f22;color:#e2e3e7;outline:none}input:focus,select:focus,textarea:focus{border-color:#aeb1ba;box-shadow:inset 0 -1px #aeb1ba}input::placeholder,textarea::placeholder{color:#73757c}button:focus-visible{outline:1px solid #c7c9d0;outline-offset:1px}",
     ".app{width:100%;height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden;background:#222326;border:1px solid #55575d;box-shadow:0 16px 65px #0008;pointer-events:auto}",
+    ".app.minimized .serverbar,.app.minimized .layout{display:none}.app.minimized{height:54px!important}",
     ".topbar{height:54px;flex:0 0 54px;display:flex;align-items:center;gap:12px;padding:0 14px;background:#292a2e;border-bottom:1px solid #45474d;cursor:move;user-select:none;touch-action:none}",
     ".brand-mark{width:29px;height:29px;display:grid;place-items:center;border:1px solid #61636a;background:#3a3b40;color:#eee;font:700 10px ui-monospace,Consolas,monospace}",
     ".brand-title{font-size:11px;font-weight:800;letter-spacing:.12em}.brand-sub{margin-top:2px;color:#94969e;font-size:9px;letter-spacing:.12em}.spacer{flex:1}",
