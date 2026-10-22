@@ -1,44 +1,39 @@
-# Server Trace
+# Server Trace — Chrome Extension
 
-A standalone Windows desktop app for discovering API endpoint references and auditing public page code. This repository no longer uses DevTools JavaScript snippets.
+Server Trace is a Chrome Manifest V3 extension that opens as a persistent Side Panel. It does not require DevTools, F12, or pasting a JavaScript snippet into a website.
 
-## Get the Windows EXE
+## Install in Chrome
 
-The GitHub Actions workflow builds a self-contained Windows x64 executable.
+1. Open the [repository page](https://github.com/FeaturedPr0ject/the-console-helper).
+2. Select **Code → Download ZIP** and extract the ZIP.
+3. In Chrome, open `chrome://extensions`.
+4. Enable **Developer mode**.
+5. Select **Load unpacked** and choose the extracted repository's `extension` folder.
+6. Pin **Server Trace — API Inspector** using Chrome's Extensions menu.
+7. Open the website you are authorized to inspect and click the Server Trace toolbar icon. The tool opens in Chrome's Side Panel; no F12 is needed.
 
-1. Open the [Actions page](https://github.com/FeaturedPr0ject/the-console-helper/actions).
-2. Select **Build Windows EXE** and open the latest successful run.
-3. Download the **ServerTrace-win-x64** artifact and extract `ServerTrace.exe`.
+To update later, download/extract the latest repository ZIP and select **Reload** on the extension card, or load the updated `extension` folder.
 
-The first workflow run starts after the project/workflow commits are pushed. If no artifact is available yet, open **Build Windows EXE** and choose **Run workflow**.
+## Features
 
-## Build on Windows
+- Inspect resource URLs already recorded by the current page and API-like references in its DOM and inline scripts.
+- Filter discovered endpoint candidates and copy sanitized URLs.
+- Export a sanitized JSON report.
+- Check inline page code for common secret-shaped patterns. The extension reports only the pattern category/source and never displays or exports matched values.
+- Dark/light styling follows the browser's system color preference.
 
-Install the .NET 8 SDK, clone this repository, then run:
+## Permissions
 
-```bat
-build-windows.bat
-```
+- `activeTab`: allows a scan of the tab after you invoke the extension.
+- `scripting`: runs the scanner in the selected tab.
+- `sidePanel`: opens the extension's dedicated panel when the toolbar icon is clicked.
 
-The standalone app will be written to `publish\ServerTrace.exe`.
-
-## Use
-
-1. Run `ServerTrace.exe`.
-2. Enter an `https://` or `http://` page URL you are authorized to inspect.
-3. Select **SCAN SITE**.
-4. Review **API ENDPOINTS**, **EXPOSURE AUDIT**, and **ACTIVITY**.
-5. Select **EXPORT REPORT** to save a sanitized JSON report.
-
-## What it checks
-
-- API-looking URLs referenced in page HTML and same-origin JavaScript bundles.
-- Up to 30 same-origin script resources, with size limits.
-- Common patterns that might indicate exposed credentials in embedded page code. The tool reports only the pattern category and source, never the matched value.
-- Sensitive URL query parameters are redacted in the displayed/exported endpoint list.
+The extension does not request blanket access to all websites in its manifest.
 
 ## Limits and privacy
 
-This app is a local audit helper, not a browser debugger or network proxy. It does not access browser cookies, session storage, login sessions, or authorization headers; does not retrieve or reveal tokens; and does not send requests to discovered API endpoints. It only fetches the user-entered page and up to 30 same-origin script resources. Cross-origin script contents are not fetched. Endpoint discovery is best-effort and can miss dynamically generated routes. Pattern matches can be false positives.
+The scanner is passive: it does not send requests to discovered API endpoints, extract or display login tokens, read cookies, access authorization headers, inspect stored session values, or fetch external script bodies. Sensitive-looking query parameter values are redacted before endpoint URLs are shown or exported.
 
-Use it only on systems you own or are explicitly authorized to inspect. Do not use discovered URLs to access accounts or services without permission.
+Only endpoints and routes visible in the loaded page's resource timing entries, DOM, or inline scripts can be discovered. Dynamically generated or server-only routes may not be found. Potential secret-pattern matches can be false positives.
+
+Use it only on websites and systems you own or have permission to inspect. This repository is not currently a Chrome Web Store listing; install it using **Load unpacked**.
