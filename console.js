@@ -3,10 +3,10 @@
   const ID = "the-console-helper-api-console";
   const EXISTING = document.getElementById(ID);
   if (EXISTING) {
+    try { window.__THE_CONSOLE_HELPER_API_CONSOLE?.close?.(); } catch {}
     EXISTING.remove();
     if (window.__THE_CONSOLE_HELPER_API_CONSOLE) delete window.__THE_CONSOLE_HELPER_API_CONSOLE;
-    console.info("API Console closed.");
-    return;
+    console.info("Existing API Console replaced with the latest version.");
   }
 
   const host = document.createElement("div");
@@ -733,7 +733,7 @@
     $("min").textContent=hidden?"RESTORE":"MINIMIZE";
     $("app").style.height=hidden?"54px":"calc(100vh - 32px)";
   });
-  $("close").addEventListener("click",()=>{host.remove();delete window.__THE_CONSOLE_HELPER_API_CONSOLE;});
+  $("close").addEventListener("click",()=>{state.scanController?.abort();state.active?.abort();host.remove();delete window.__THE_CONSOLE_HELPER_API_CONSOLE;});
   let drag=false,dx=0,dy=0;
   $("drag").addEventListener("pointerdown",event=>{
     if(event.target.closest("button"))return;
