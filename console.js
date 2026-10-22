@@ -404,9 +404,12 @@
     if (!documentObject || typeof documentObject !== "object" || !documentObject.paths || typeof documentObject.paths !== "object") {
       throw new Error("This JSON does not look like an OpenAPI / Swagger document (missing paths).");
     }
-    const serverUrl = documentObject.servers?.[0]?.url
+    let serverUrl = documentObject.servers?.[0]?.url
       || documentObject.host && ((documentObject.schemes?.[0] || "https") + "://" + documentObject.host + (documentObject.basePath || ""))
       || "";
+    if (serverUrl && !/^https?:\/\//i.test(serverUrl)) {
+      try { serverUrl = new URL(serverUrl, location.origin).href; } catch {}
+    }
     const endpoints = [];
     for (const [path, pathItem] of Object.entries(documentObject.paths)) {
       if (!pathItem || typeof pathItem !== "object") continue;
