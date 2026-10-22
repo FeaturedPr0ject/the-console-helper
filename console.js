@@ -61,7 +61,7 @@
 
   shadow.innerHTML = "<style>" + css + "</style>" + markup;
   const $ = id => shadow.getElementById(id);
-  const state = { endpoints: [], active: null, history: [], response: "", responseType: "text/plain", schema: null, timers: new Set() };
+  const state = { endpoints: [], schemaEndpoints: [], discoveredEndpoints: [], discoveredServers: [], active: null, history: [], response: "", responseType: "text/plain", schema: null, timers: new Set(), scanController: null, scanRunId: 0 };
   const methods = ["get","post","put","patch","delete","head","options"];
   const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
 
@@ -138,12 +138,41 @@
   }
 
   function makeUrl() {
-    const baseText = $("baseUrl").value.trim();
-    if (!baseText) throw new Error("Enter SERVER BASE URL first.");
+    let baseText = $("baseUrl").value.trim();
+    let path = $("path").value.trim() || "/";
+    let fullUrl = null;
+
+    if (/^https?:\/\//i.test(path)) {
+      try {
+        fullUrl = new URL(path);
+      } catch {
+        throw new Error("The full URL in PATH is invalid.");
+      }
+      if (!["http:","https:"].includes(fullUrl.protocol)) throw new Error("Only HTTP and HTTPS URLs are supported.");
+      if (fullUrl.username || fullUrl.password) throw new Error("Remove credentials from the URL and use an Authorization header.");
+      baseText = fullUrl.origin;
+      $("baseUrl").value = baseText;
+      path = fullUrl.pathname + fullUrl.search;
+      $("path").value = path || "/";
+      syncPathRows();
+    }
+
+    if (!baseText) {
+      if (/^\/\//.test(path)) {
+        const parsed = new URL(location.protocol + path);
+        baseText = parsed.origin;
+        $("baseUrl").value = baseText;
+        path = parsed.pathname + parsed.search;
+        $("path").value = path || "/";
+      } else {
+        throw new Error("Enter SERVER BASE URL, or paste the complete https:// URL into PATH.");
+      }
+    }
+
     const base = new URL(baseText);
     if (!["http:","https:"].includes(base.protocol)) throw new Error("Only HTTP and HTTPS URLs are supported.");
     if (base.username || base.password) throw new Error("Remove credentials from the URL and use an Authorization header.");
-    let path = $("path").value.trim() || "/";
+
     const vars = Object.fromEntries(readRows($("pathRows")));
     path = path.replace(/\{([^}]+)\}/g, (match,key) => {
       if (!(key in vars)) throw new Error("Missing path variable: " + key);
