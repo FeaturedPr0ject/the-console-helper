@@ -1,30 +1,34 @@
 # The Console Helper
 
-A standalone JavaScript snippet that injects a gray, square-corner API playground into the current page from Chrome DevTools Console. It is not a separate HTML app and does not use React.
+A standalone JavaScript snippet that injects a gray, square-corner API workbench into the current page from Chrome DevTools Console. It is not a separate HTML app and does not use React.
 
-## Run from Chrome DevTools
+## Run
 
 1. Open the raw script: https://raw.githubusercontent.com/FeaturedPr0ject/the-console-helper/main/console.js
-2. Copy the complete JavaScript source.
-3. Open the page where you want the panel, press `Ctrl+Shift+J`, paste the source into DevTools Console, and press Enter.
+2. Copy the full file.
+3. Open the page to inspect, press `Ctrl+Shift+J`, paste the complete source into DevTools Console, and press Enter.
 
-On pages with strict Content Security Policy, do not use a `fetch(raw.githubusercontent.com/...)` loader from the page console: the page's `connect-src` can block that request. Copy the source from the raw file and paste it directly.
+On strict-CSP pages, do not load the snippet using `fetch(raw.githubusercontent.com/...)` from the page console; `connect-src` may block that connection. Copy the raw source and paste it directly.
 
-The snippet creates its UI in Shadow DOM, so the gray API workbench's styles are isolated from the current page. Run it again to close an existing panel, or use its CLOSE button.
+## Find API servers on the current page
 
-## Features
+The panel runs a quick scan automatically and has a **SCAN CURRENT PAGE** button with a progress bar. It inspects the browser's existing Performance Resource Timing entries, fetch/XHR URLs, inline scripts, and API-like DOM references. Found host origins appear as clickable server chips; selecting one fills SERVER BASE URL. Discovered paths appear in API EXPLORER. Since browser timing APIs do not expose the HTTP method for every request, discovered resource entries default to GET and are labeled as an assumption.
+
+Enable **DEEP SCAN SCRIPTS** to try reading up to 30 same-origin JavaScript bundles and search for API base URLs and route strings. The progress bar reports progress and the Cancel button stops the scan.
+
+If you paste a complete URL such as `https://api.example.com/v1/users` into the request path field, the snippet splits its origin into SERVER BASE URL and retains its path automatically when you send.
+
+## Other features
 
 - HTTP methods: GET, POST, PUT, PATCH, DELETE, HEAD and OPTIONS
-- Base URL, path variables, query parameters, custom headers, request body and credentials options
-- Response status, duration, body, available response headers, copy and export
-- OpenAPI / Swagger 2.0 and OpenAPI 3.x JSON import by URL, pasted content or local JSON file
-- Searches common OpenAPI JSON locations on a server when you choose **FIND SPEC**
-- Filterable endpoint list and request history for the current page session
+- Path variables, query parameters, custom headers and JSON/text/form bodies
+- Response status, duration, body, response headers exposed by CORS, copy and export
+- OpenAPI / Swagger 2.0 and OpenAPI 3.x JSON import from URL, pasted text, or a local JSON file
+- Find common OpenAPI schema paths from the chosen base URL
+- Searchable endpoints and request history for the current panel session
 
 ## Limits
 
-The browser can list endpoints that are documented in an OpenAPI / Swagger schema. **FIND SPEC** checks a short list of conventional schema locations; it does not enumerate every undocumented route on a server.
+This is a browser-context scanner, not a network proxy. It can inspect URLs the current page has already requested and source text the browser allows it to read. It cannot reveal endpoints that were never loaded, infer every hidden route, read cross-origin scripts without permission, or bypass CORS/CSP. OpenAPI URLs and API requests may be blocked by the current page's policy. Some response headers are hidden unless the API server exposes them through CORS.
 
-Requests run in the current page's JavaScript context. The server must allow the page's origin through CORS; a page's Content Security Policy can also block network connections. The snippet cannot bypass these browser protections. Some response headers are only readable if the server exposes them via CORS.
-
-Use this only with servers you are authorized to test. Do not paste production secrets into a shared or untrusted browser session.
+Use it only for websites and APIs you are allowed to inspect. Avoid entering production secrets on shared or untrusted devices.
