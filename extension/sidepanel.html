@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Server Trace</title>
+  <link rel="stylesheet" href="sidepanel.css">
+</head>
+<body>
+  <header class="header">
+    <div class="brand-row">
+      <div class="mark" aria-hidden="true">ST</div>
+      <div class="brand"><h1>SERVER TRACE</h1><p>API INSPECTOR · LOCAL SCAN</p></div>
+      <span class="status-dot" title="Local scan"></span>
+    </div>
+    <div class="tab-info">
+      <div id="pageTitle" class="page-title">No page scanned</div>
+      <div id="pageOrigin" class="page-origin">Click Scan current tab to begin.</div>
+    </div>
+    <div class="actions">
+      <button id="scanButton" class="button primary">SCAN CURRENT TAB</button>
+      <button id="exportButton" class="button" disabled>EXPORT JSON</button>
+    </div>
+    <div id="status" class="status" role="status">Ready. The scanner does not send requests to servers.</div>
+  </header>
+  <main>
+    <section class="stats">
+      <div class="stat"><span class="stat-label">ENDPOINTS</span><strong id="endpointCount">0</strong></div>
+      <div class="stat"><span class="stat-label">POSSIBLE EXPOSURES</span><strong id="findingCount">0</strong></div>
+      <div class="stat"><span class="stat-label">INLINE SCRIPTS</span><strong id="scriptCount">0</strong></div>
+    </section>
+    <nav class="tabs" aria-label="Scan results">
+      <button class="tab active" data-view="endpoints">API ENDPOINTS</button>
+      <button class="tab" data-view="exposures">EXPOSURE CHECKS</button>
+      <button class="tab" data-view="about">ABOUT</button>
+    </nav>
+    <section id="endpointsView" class="view">
+      <div class="toolbar">
+        <input id="filterInput" type="search" placeholder="Filter endpoint or host…" autocomplete="off">
+        <button id="copyAllButton" class="button small" disabled>COPY ALL</button>
+      </div>
+      <div id="endpointList" class="result-list"><div class="empty">Scan the current tab to discover endpoint references.</div></div>
+    </section>
+    <section id="exposuresView" class="view hidden">
+      <div class="notice">Checks only report pattern categories and source locations. Matched values are never displayed, stored, or exported.</div>
+      <div id="exposureList" class="result-list"><div class="empty">No scan results yet.</div></div>
+    </section>
+    <section id="aboutView" class="view hidden">
+      <div class="notice"><strong>Local, passive scan</strong><p>Inspects resource URLs already recorded by the browser, API-like references in the page, and inline script text.</p><p>Does not read cookies, authorization headers, login sessions, or storage values. Does not send requests to discovered endpoints or extract tokens.</p></div>
+      <div class="about-row"><span>Extension</span><strong>Manifest V3</strong></div>
+      <div class="about-row"><span>Interface</span><strong>Chrome Side Panel</strong></div>
+      <div class="about-row"><span>Data collection</span><strong>None</strong></div>
+      <div class="about-row"><span>Cross-origin scripts</span><strong>References only</strong></div>
+      <div class="notice warning">Only inspect websites and systems you own or are authorized to test. Endpoint discovery is best-effort and cannot reveal every server-side route.</div>
+    </section>
+  </main>
+  <footer class="footer"><span id="scanTime">Not scanned</span><span>SERVER TRACE 1.0.0</span></footer>
+  <script src="sidepanel.js"></script>
+</body>
+</html>
