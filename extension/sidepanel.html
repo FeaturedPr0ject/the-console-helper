@@ -32,6 +32,7 @@
     <nav class="tabs" aria-label="Scan results">
       <button class="tab active" data-view="endpoints">API ENDPOINTS</button>
       <button class="tab" data-view="exposures">EXPOSURE CHECKS</button>
+      <button class="tab" data-view="console">CONSOLE</button>
       <button class="tab" data-view="about">ABOUT</button>
     </nav>
     <section id="endpointsView" class="view">
@@ -45,6 +46,19 @@
       <div class="notice">Checks only report pattern categories and source locations. Matched values are never displayed, stored, or exported.</div>
       <div id="exposureList" class="result-list"><div class="empty">No scan results yet.</div></div>
     </section>
+    <section id="consoleView" class="view hidden">
+      <div class="notice console-notice"><strong>Isolated JavaScript console</strong><p>Run JavaScript commands or choose a .js file. Code runs in a separate sandbox and cannot access the active website's DOM, cookies, login session, or private page JavaScript. Network requests are blocked.</p><p>Available data: <code>pageInfo</code>, <code>endpoints</code>, <code>findEndpoints("query")</code>, and persistent <code>state</code>.</p></div>
+      <div class="console-toolbar">
+        <button id="runCommandButton" class="button primary">RUN · Ctrl+Enter</button>
+        <button id="runFileButton" class="button">RUN FILE</button>
+        <button id="clearConsoleButton" class="button">CLEAR</button>
+        <input id="consoleFileInput" class="hidden" type="file" accept=".js,.mjs,.cjs,.txt,text/javascript,application/javascript">
+      </div>
+      <textarea id="consoleInput" class="console-input" spellcheck="false" aria-label="JavaScript command input" placeholder='console.log("Hello, Server Trace");'></textarea>
+      <div class="console-output-head"><span>OUTPUT</span><span id="consoleRunStatus">Sandbox ready</span></div>
+      <div id="consoleOutput" class="console-output" role="log" aria-live="polite"><div class="console-line muted-line">JavaScript commands run in an isolated sandbox. Use console.log(...) to display results.</div></div>
+      <iframe id="consoleSandbox" class="sandbox-frame" src="sandbox.html" sandbox="allow-scripts" title="Isolated JavaScript runner"></iframe>
+    </section>
     <section id="aboutView" class="view hidden">
       <div class="notice"><strong>Local, passive scan</strong><p>Inspects resource URLs already recorded by the browser, API-like references in the page, and inline script text.</p><p>Does not read cookies, authorization headers, login sessions, or storage values. Does not send requests to discovered endpoints or extract tokens.</p></div>
       <div class="about-row"><span>Extension</span><strong>Manifest V3</strong></div>
@@ -54,7 +68,7 @@
       <div class="notice warning">Only inspect websites and systems you own or are authorized to test. Endpoint discovery is best-effort and cannot reveal every server-side route.</div>
     </section>
   </main>
-  <footer class="footer"><span id="scanTime">Not scanned</span><span>SERVER TRACE 1.0.0</span></footer>
+  <footer class="footer"><span id="scanTime">Not scanned</span><span>SERVER TRACE 1.1.0</span></footer>
   <script src="sidepanel.js"></script>
 </body>
 </html>
