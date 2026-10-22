@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Server Trace — API Inspector",
+  "version": "1.0.0",
+  "description": "A standalone side panel for inspecting API endpoint references on the current tab.",
+  "permissions": ["activeTab", "scripting", "sidePanel"],
+  "background": {"service_worker": "service-worker.js"},
+  "action": {"default_title": "Open Server Trace"},
+  "side_panel": {"default_path": "sidepanel.html"}
+}
