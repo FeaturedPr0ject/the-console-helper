@@ -32,3 +32,15 @@ If you paste a complete URL such as `https://api.example.com/v1/users` into the 
 This is a browser-context scanner, not a network proxy. It can inspect URLs the current page has already requested and source text the browser allows it to read. It cannot reveal endpoints that were never loaded, infer every hidden route, read cross-origin scripts without permission, or bypass CORS/CSP. OpenAPI URLs and API requests may be blocked by the current page's policy. Some response headers are hidden unless the API server exposes them through CORS.
 
 Use it only for websites and APIs you are allowed to inspect. Avoid entering production secrets on shared or untrusted devices.
+
+## Server Trace / Local Audit
+
+A separate, local-only console for auditing the currently open page:
+
+1. Open https://raw.githubusercontent.com/FeaturedPr0ject/the-console-helper/main/server-audit.js
+2. Copy the complete JavaScript source.
+3. Open Chrome DevTools Console on the page you are authorized to inspect, paste the source, and press Enter.
+
+It lists already-observed fetch/XHR URLs and API-looking references, redacts sensitive query parameters, checks embedded inline scripts for common secret-shaped patterns without showing their values, and lists localStorage/sessionStorage key names only. It does not send network requests, read cookies or authorization headers, fetch external script bodies, or collect storage values. Pattern matches can be false positives and require manual review.
+
+This tool is a local audit helper, not a token extractor. Use it only on pages and systems you are authorized to inspect.
