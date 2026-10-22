@@ -1,568 +1,479 @@
 (() => {
   "use strict";
-  const $ = id => document.getElementById(id);
-  const state = {
-    endpoints: [],
-    schema: null,
-    history: [],
-    activeController: null,
-    responseText: "",
-    responseHeaderText: "",
-    responseBlobType: "text/plain"
-  };
-  const METHODS = new Set(["GET","POST","PUT","PATCH","DELETE","HEAD","OPTIONS"]);
-  const METHOD_ORDER = ["get","post","put","patch","delete","head","options"];
-  const METHOD_CLASS = method => "method-" + String(method).toLowerCase();
+  const ID = "the-console-helper-api-console";
+  const EXISTING = document.getElementById(ID);
+  if (EXISTING) {
+    EXISTING.remove();
+    if (window.__THE_CONSOLE_HELPER_API_CONSOLE) delete window.__THE_CONSOLE_HELPER_API_CONSOLE;
+    console.info("API Console closed.");
+    return;
+  }
 
-  function createKvRow(container, key = "", value = "") {
+  const host = document.createElement("div");
+  host.id = ID;
+  host.style.cssText = "all:initial;position:fixed;left:16px;top:16px;z-index:2147483647;width:calc(100vw - 32px);max-width:1180px;height:calc(100vh - 32px);max-height:900px;pointer-events:none;";
+  const shadow = host.attachShadow({ mode: "open" });
+  document.documentElement.appendChild(host);
+
+  const css = [
+    ":host{all:initial;color-scheme:dark;font:12px/1.45 Inter,'Segoe UI',Arial,sans-serif;color:#e2e3e7}",
+    "*,*::before,*::after{box-sizing:border-box;border-radius:0!important}",
+    "button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer}button:disabled{opacity:.38;cursor:not-allowed}",
+    "input,select,textarea{min-width:0;border:1px solid #484a50;background:#1e1f22;color:#e2e3e7;outline:none}input:focus,select:focus,textarea:focus{border-color:#aeb1ba;box-shadow:inset 0 -1px #aeb1ba}input::placeholder,textarea::placeholder{color:#73757c}button:focus-visible{outline:1px solid #c7c9d0;outline-offset:1px}",
+    ".app{width:100%;height:100%;min-height:0;display:flex;flex-direction:column;overflow:hidden;background:#222326;border:1px solid #55575d;box-shadow:0 16px 65px #0008;pointer-events:auto}",
+    ".topbar{height:54px;flex:0 0 54px;display:flex;align-items:center;gap:12px;padding:0 14px;background:#292a2e;border-bottom:1px solid #45474d;cursor:move;user-select:none;touch-action:none}",
+    ".brand-mark{width:29px;height:29px;display:grid;place-items:center;border:1px solid #61636a;background:#3a3b40;color:#eee;font:700 10px ui-monospace,Consolas,monospace}",
+    ".brand-title{font-size:11px;font-weight:800;letter-spacing:.12em}.brand-sub{margin-top:2px;color:#94969e;font-size:9px;letter-spacing:.12em}.spacer{flex:1}",
+    ".top-actions{display:flex;align-items:center;gap:6px}.micro-status{display:flex;align-items:center;gap:6px;color:#a7a9b0;font:9px ui-monospace,Consolas,monospace}.dot{width:6px;height:6px;background:#7ec7a6;display:inline-block}.dot.off{background:#d1ad6a}",
+    ".btn{height:30px;padding:0 10px;border:1px solid #505259;background:#34353a;color:#daddE3;font-size:9px;font-weight:700;letter-spacing:.045em;white-space:nowrap}.btn:hover:not(:disabled){background:#414249;border-color:#686a72}.btn-primary{background:#c4c6cd;border-color:#c4c6cd;color:#1e1f22}.btn-primary:hover:not(:disabled){background:#e0e1e5}.btn-quiet{background:transparent;border-color:transparent;color:#b9bbc2}.btn-danger{color:#e2a0a0;border-color:#684448;background:#3a2a2d}",
+    ".serverbar{display:grid;grid-template-columns:minmax(200px,1fr) minmax(240px,1.35fr) auto auto auto;gap:7px;align-items:end;padding:10px 12px;background:#292a2e;border-bottom:1px solid #45474d}",
+    ".field{display:flex;flex-direction:column;gap:5px;min-width:0}.field label,.eyebrow{font:9px ui-monospace,Consolas,monospace;letter-spacing:.09em;color:#989aa2}.field input,.field select{width:100%;height:30px;padding:0 8px;font:10px ui-monospace,Consolas,monospace}",
+    ".spec-drawer{padding:10px 12px;background:#26272b;border-bottom:1px solid #45474d}.spec-drawer[hidden],.pane[hidden],.request-content[hidden],.response-view[hidden]{display:none!important}.spec-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.spec-help{color:#a2a4ac;font-size:10px}.spec-input{width:100%;padding:8px;font:10px/1.5 ui-monospace,Consolas,monospace;resize:vertical}.spec-bottom{display:flex;align-items:center;gap:8px;margin-top:7px}.spec-msg{flex:1;color:#a5a7af;font-size:10px}",
+    ".layout{display:grid;grid-template-columns:250px minmax(0,1fr);flex:1;min-height:0}",
+    ".sidebar{display:flex;flex-direction:column;min-height:0;background:#26272b;border-right:1px solid #45474d}.side-head{display:flex;align-items:center;justify-content:space-between;padding:12px 11px 9px}.section-title{font-size:9px;font-weight:800;letter-spacing:.12em}.count{padding:2px 5px;color:#bfc1c7;background:#3c3d43;font:9px ui-monospace,Consolas,monospace}",
+    ".search{display:flex;gap:6px;padding:0 9px 9px}.search input{width:100%;height:29px;padding:0 8px;font-size:10px}.endpoint-list{overflow:auto;flex:1;min-height:80px;padding:0 6px 8px}.empty{padding:18px 8px;color:#92949d;font-size:10px;line-height:1.6}.group-label{padding:11px 6px 5px;color:#878991;font:9px ui-monospace,Consolas,monospace;letter-spacing:.1em;text-transform:uppercase}.endpoint{display:flex;width:100%;align-items:flex-start;gap:7px;padding:7px 6px;border:0;border-left:2px solid transparent;background:transparent;text-align:left}.endpoint:hover{background:#333439}.endpoint.selected{background:#393a40;border-left-color:#c2c4cb}.method{width:43px;flex:0 0 43px;padding:3px 2px;background:#37383e;text-align:center;font:700 9px ui-monospace,Consolas,monospace;color:#c7c9d0}.m-get{color:#8bc9a9}.m-post{color:#d4bd80}.m-put,.m-patch{color:#98bae3}.m-delete{color:#e49b9b}.ep-path{display:block;overflow-wrap:anywhere;font:10px/1.45 ui-monospace,Consolas,monospace;color:#dbdce1}.ep-summary{display:block;margin-top:2px;color:#898b94;font-size:9px;line-height:1.4}.history{max-height:155px;overflow:auto;border-top:1px solid #45474d}.history-list{padding:0 7px 8px}.history-item{display:flex;width:100%;align-items:center;gap:6px;padding:6px;border:0;background:transparent;text-align:left}.history-item:hover{background:#35363b}.history-path{overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#c2c4cc;font:9px ui-monospace,Consolas,monospace}",
+    ".work{display:flex;flex-direction:column;min-width:0;min-height:0}.request{padding:13px 14px 11px;border-bottom:1px solid #45474d}.section-line{display:flex;align-items:center;justify-content:space-between;gap:10px}.muted{color:#9698a1;font-size:10px}.request-line{display:grid;grid-template-columns:91px minmax(0,1fr) auto auto;gap:6px;margin-top:11px}.request-line select,.request-line input{height:35px;padding:0 9px}.request-line select{background:#35363b;font:700 10px ui-monospace,Consolas,monospace}.request-line input{font:11px ui-monospace,Consolas,monospace}.request-tabs{display:flex;gap:15px;margin-top:14px;border-bottom:1px solid #3d3f44}.tab{padding:0 0 8px;border:0;border-bottom:2px solid transparent;background:transparent;color:#9698a1;font-size:10px}.tab.active{border-bottom-color:#c6c8ce;color:#edeef1}.tab-badge{margin-left:4px;color:#858791;font:9px ui-monospace,Consolas,monospace}.request-content{padding-top:9px}.table-head,.kv{display:grid;grid-template-columns:minmax(85px,.8fr) minmax(100px,1.2fr) 22px;gap:6px}.table-head{padding:0 3px 6px;color:#83858d;font:9px ui-monospace,Consolas,monospace;letter-spacing:.08em}.kv{margin-bottom:5px}.kv input{height:28px;width:100%;padding:0 7px;font:10px ui-monospace,Consolas,monospace}.remove{border:0;background:transparent;color:#898b93;font-size:15px}.remove:hover{color:#e6a1a1}.add-row{height:24px;padding:0;border:0;background:transparent;color:#c4c6ce;font-size:10px}.body-tools{display:flex;align-items:center;gap:8px;margin-bottom:6px}.body-tools select{height:26px;padding:0 6px;font-size:10px}.body-editor{display:block;width:100%;min-height:85px;padding:8px;font:10px/1.55 ui-monospace,Consolas,monospace;resize:vertical;tab-size:2}.req-options{display:flex;align-items:end;justify-content:space-between;gap:10px;padding-top:9px;margin-top:8px;border-top:1px solid #3b3d42}.req-options .field{width:185px}.req-options select{height:27px;font-size:10px}.req-note{flex:1;text-align:right;color:#93959e;font-size:10px;line-height:1.5}",
+    ".response{display:flex;flex:1;flex-direction:column;min-height:190px}.response-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px 9px;border-bottom:1px solid #3b3d42}.response-tools{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.status-code{padding:4px 6px;border:1px solid #4b4d54;color:#aeb0b9;font:9px ui-monospace,Consolas,monospace}.status-code.ok{color:#83c9a6;border-color:#3e6551;background:#28372f}.status-code.bad{color:#e7a2a2;border-color:#664347;background:#392a2c}.duration{color:#9b9da5;font:9px ui-monospace,Consolas,monospace;white-space:nowrap}.response-tabs{display:flex;gap:15px;padding:9px 14px 0;border-bottom:1px solid #3b3d42}.response-view{flex:1;min-height:140px;overflow:auto;background:#1d1e21}.response-code{margin:0;min-height:140px;padding:12px 14px;white-space:pre-wrap;overflow-wrap:anywhere;tab-size:2;color:#d2d4da;font:10px/1.6 ui-monospace,Consolas,monospace}.placeholder{color:#777982}.statusbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 10px;background:#292a2e;border-top:1px solid #45474d;color:#898b93;font:9px ui-monospace,Consolas,monospace}.status-connection{display:flex;align-items:center;gap:6px}",
+    "@media(max-width:760px){.layout{grid-template-columns:190px minmax(0,1fr)}.serverbar{grid-template-columns:1fr 1fr}.serverbar .field:first-child{grid-column:1/-1}.request-line{grid-template-columns:77px minmax(0,1fr) auto}.request-line #cancel{grid-column:3}.req-note{display:none}.request{padding:10px}.response-head{align-items:flex-start;flex-direction:column}}",
+    "@media(max-width:560px){.layout{grid-template-columns:1fr}.sidebar{max-height:175px;border-right:0;border-bottom:1px solid #45474d}.endpoint-list{max-height:85px}.history{display:none}.topbar{padding:0 8px}.top-actions .micro-status{display:none}.brand-sub{font-size:8px}.serverbar{padding:7px}.request-line{grid-template-columns:72px minmax(0,1fr) auto}.request-line #cancel{grid-column:3}.request-tabs{gap:10px}.tab{font-size:9px}.table-head,.kv{grid-template-columns:minmax(70px,.8fr) minmax(80px,1.2fr) 20px}.response-head{padding:9px}.response-code{padding:9px}}",
+    "@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}"
+  ].join("\n");
+
+  const markup = [
+    "<div class='app' id='app'>",
+    "<header class='topbar' id='drag'><div class='brand-mark'>TC</div><div><div class='brand-title'>THE CONSOLE HELPER</div><div class='brand-sub'>API WORKBENCH / DEVTOOLS SNIPPET</div></div><div class='spacer'></div><div class='top-actions'><span class='micro-status'><i class='dot'></i> LOCAL SESSION</span><button class='btn btn-quiet' id='specToggle'>OPENAPI</button><button class='btn btn-quiet' id='min'>MINIMIZE</button><button class='btn btn-quiet' id='close'>CLOSE ×</button></div></header>",
+    "<div class='serverbar'><div class='field'><label>SERVER BASE URL</label><input id='baseUrl' type='url' spellcheck='false' placeholder='https://api.example.com'></div><div class='field'><label>OPENAPI SPEC URL</label><input id='specUrl' type='url' spellcheck='false' placeholder='https://api.example.com/openapi.json'></div><button class='btn btn-primary' id='loadSpec'>LOAD SPEC</button><button class='btn' id='discover'>FIND SPEC</button><button class='btn' id='importFile'>IMPORT JSON</button><input id='file' type='file' accept='.json,application/json' hidden></div>",
+    "<section class='spec-drawer' id='specDrawer' hidden><div class='spec-top'><div><div class='section-title'>OPENAPI / SWAGGER JSON</div><div class='spec-help'>Import a schema to list documented endpoints. YAML is not parsed by this snippet.</div></div><button class='btn btn-quiet' id='closeSpec'>CLOSE ×</button></div><textarea class='spec-input' id='specText' rows='5' spellcheck='false' placeholder='Paste OpenAPI 3.x / Swagger 2.0 JSON here'></textarea><div class='spec-bottom'><span class='spec-msg' id='specMsg'>No schema loaded.</span><button class='btn btn-primary' id='parseSpec'>PARSE JSON</button></div></section>",
+    "<div class='layout'><aside class='sidebar'><div class='side-head'><span class='section-title'>API EXPLORER</span><span class='count' id='endpointCount'>0</span></div><div class='search'><input id='endpointSearch' type='search' placeholder='Filter endpoints…'></div><div class='endpoint-list' id='endpointList'><div class='empty'>No API schema loaded.<br>Click OPENAPI or FIND SPEC.</div></div><div class='history'><div class='side-head'><span class='section-title'>REQUEST HISTORY</span><button class='btn btn-quiet' id='clearHistory'>CLEAR</button></div><div class='history-list' id='historyList'><div class='empty'>Requests appear here for this session.</div></div></div></aside>",
+    "<main class='work'><section class='request'><div class='section-line'><div><div class='section-title'>REQUEST BUILDER</div><div class='muted'>Compose an HTTP request to the selected server.</div></div><span class='muted'>Ctrl + Enter · SEND</span></div>",
+    "<div class='request-line'><select id='method' aria-label='HTTP method'><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option><option>HEAD</option><option>OPTIONS</option></select><input id='path' spellcheck='false' placeholder='/v1/resource or /users/{userId}' aria-label='Request path'><button class='btn btn-primary' id='send'>SEND ▶</button><button class='btn btn-danger' id='cancel' disabled>CANCEL</button></div>",
+    "<div class='request-tabs'><button class='tab active' data-rtab='params'>PARAMS <span class='tab-badge' id='paramCount'>0</span></button><button class='tab' data-rtab='pathvars'>PATH <span class='tab-badge' id='pathCount'>0</span></button><button class='tab' data-rtab='headers'>HEADERS <span class='tab-badge' id='headerCount'>0</span></button><button class='tab' data-rtab='body'>BODY</button></div>",
+    "<div class='request-content' id='tab-params'><div class='table-head'><span>KEY</span><span>VALUE</span><span></span></div><div id='queryRows'></div><button class='add-row' id='addQuery'>+ Add query parameter</button></div>",
+    "<div class='request-content' id='tab-pathvars' hidden><div class='table-head'><span>PATH VARIABLE</span><span>VALUE</span><span></span></div><div id='pathRows'></div><div class='muted'>Path variables are URL-encoded before sending.</div></div>",
+    "<div class='request-content' id='tab-headers' hidden><div class='table-head'><span>HEADER</span><span>VALUE</span><span></span></div><div id='headerRows'></div><button class='add-row' id='addHeader'>+ Add header</button></div>",
+    "<div class='request-content' id='tab-body' hidden><div class='body-tools'><span class='eyebrow'>BODY TYPE</span><select id='bodyType'><option value='json'>JSON</option><option value='text'>TEXT</option><option value='form'>URL-ENCODED</option></select><span class='muted'>GET and HEAD do not send a body.</span></div><textarea class='body-editor' id='body' rows='4' spellcheck='false' placeholder='{\"example\":true}'></textarea></div>",
+    "<div class='req-options'><div class='field'><label>CREDENTIALS</label><select id='credentials'><option value='same-origin'>Same-origin cookies</option><option value='omit'>Omit cookies</option><option value='include'>Include cookies (CORS)</option></select></div><div class='req-note' id='requestNote'>Ready. Configure base URL and path.</div></div></section>",
+    "<section class='response'><div class='response-head'><div><div class='section-title'>RESPONSE</div><div class='muted' id='responseSummary'>Waiting for request</div></div><div class='response-tools'><span class='status-code' id='statusCode'>NO RESPONSE</span><span class='duration' id='duration'>—</span><button class='btn' id='copy' disabled>COPY</button><button class='btn' id='export' disabled>EXPORT</button></div></div>",
+    "<div class='response-tabs'><button class='tab active' data-vtab='body'>BODY</button><button class='tab' data-vtab='headers'>HEADERS</button></div><div class='response-view' id='view-body'><pre class='response-code' id='responseBody'><span class='placeholder'>Send a request to inspect its response.</span></pre></div><div class='response-view' id='view-headers' hidden><pre class='response-code' id='responseHeaders'><span class='placeholder'>Response headers will appear here.</span></pre></div></section>",
+    "<footer class='statusbar'><span class='status-connection' id='connection'><i class='dot off'></i><span>READY</span></span><span>DIRECT BROWSER REQUEST · CORS APPLIES</span><span id='size'>0 B</span></footer></main></div></div>"
+  ].join("");
+
+  shadow.innerHTML = "<style>" + css + "</style>" + markup;
+  const $ = id => shadow.getElementById(id);
+  const state = { endpoints: [], active: null, history: [], response: "", responseType: "text/plain", schema: null, timers: new Set() };
+  const methods = ["get","post","put","patch","delete","head","options"];
+  const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+
+  function status(message, bad = false) {
+    $("connection").replaceChildren();
+    const dot = document.createElement("i");
+    dot.className = "dot" + (bad ? " off" : "");
+    const text = document.createElement("span");
+    text.textContent = message;
+    $("connection").append(dot,text);
+  }
+
+  function addRow(container, key = "", value = "") {
     const row = document.createElement("div");
-    row.className = "kv-row";
-    const keyInput = document.createElement("input");
-    keyInput.type = "text";
-    keyInput.placeholder = "Key";
-    keyInput.value = key;
-    keyInput.spellcheck = false;
-    const valueInput = document.createElement("input");
-    valueInput.type = "text";
-    valueInput.placeholder = "Value";
-    valueInput.value = value;
-    valueInput.spellcheck = false;
+    row.className = "kv";
+    const k = document.createElement("input");
+    k.placeholder = "Key"; k.value = key; k.spellcheck = false;
+    const v = document.createElement("input");
+    v.placeholder = "Value"; v.value = value; v.spellcheck = false;
     const remove = document.createElement("button");
-    remove.className = "remove-row";
-    remove.type = "button";
-    remove.textContent = "×";
-    remove.setAttribute("aria-label", "Remove row");
-    remove.addEventListener("click", () => {
-      row.remove();
-      updateBadges();
-    });
-    keyInput.addEventListener("input", updateBadges);
-    valueInput.addEventListener("input", updateBadges);
-    row.append(keyInput, valueInput, remove);
-    container.appendChild(row);
-    updateBadges();
+    remove.className = "remove"; remove.type = "button"; remove.textContent = "×";
+    remove.title = "Remove row";
+    remove.addEventListener("click", () => { row.remove(); updateCounts(); });
+    k.addEventListener("input", updateCounts);
+    v.addEventListener("input", updateCounts);
+    row.append(k,v,remove); container.append(row);
+    updateCounts();
     return row;
   }
 
   function readRows(container) {
-    return [...container.querySelectorAll(".kv-row")].map(row => {
+    return [...container.querySelectorAll(".kv")].map(row => {
       const inputs = row.querySelectorAll("input");
-      return [inputs[0].value.trim(), inputs[1].value];
-    }).filter(([key]) => key);
+      return [inputs[0].value.trim(),inputs[1].value];
+    }).filter(pair => pair[0]);
   }
 
-  function rowsFromObject(container, object) {
+  function fillRows(container, object) {
     container.replaceChildren();
-    for (const [key, value] of Object.entries(object || {})) {
-      createKvRow(container, key, typeof value === "string" ? value : JSON.stringify(value));
+    for (const [key,value] of Object.entries(object || {})) addRow(container,key,typeof value === "string" ? value : JSON.stringify(value));
+    if (!container.children.length) addRow(container);
+    updateCounts();
+  }
+
+  function updateCounts() {
+    $("paramCount").textContent = readRows($("queryRows")).length;
+    $("headerCount").textContent = readRows($("headerRows")).length;
+    $("pathCount").textContent = [...$("path").value.matchAll(/\{([^}]+)\}/g)].length;
+  }
+
+  function showRequestTab(name) {
+    shadow.querySelectorAll("[data-rtab]").forEach(b => b.classList.toggle("active",b.dataset.rtab === name));
+    ["params","pathvars","headers","body"].forEach(n => $("tab-" + n).hidden = n !== name);
+  }
+
+  function showView(name) {
+    shadow.querySelectorAll("[data-vtab]").forEach(b => b.classList.toggle("active",b.dataset.vtab === name));
+    $("view-body").hidden = name !== "body";
+    $("view-headers").hidden = name !== "headers";
+  }
+
+  function syncPathRows() {
+    const old = new Map(readRows($("pathRows")));
+    const names = [...$("path").value.matchAll(/\{([^}]+)\}/g)].map(m => m[1]);
+    $("pathRows").replaceChildren();
+    for (const name of names) addRow($("pathRows"),name,old.get(name) || "");
+    if (!names.length) {
+      const note = document.createElement("div");
+      note.className = "empty";
+      note.textContent = "No {pathVariables} in this path.";
+      $("pathRows").append(note);
     }
-    if (!container.children.length) createKvRow(container);
-    updateBadges();
+    updateCounts();
   }
 
-  function updateBadges() {
-    $("paramBadge").textContent = readRows($("queryRows")).length;
-    $("headerBadge").textContent = readRows($("headerRows")).length;
-    $("pathvarBadge").textContent = [...$("path").value.matchAll(/\{([^}]+)\}/g)].length;
+  function makeUrl() {
+    const baseText = $("baseUrl").value.trim();
+    if (!baseText) throw new Error("Enter SERVER BASE URL first.");
+    const base = new URL(baseText);
+    if (!["http:","https:"].includes(base.protocol)) throw new Error("Only HTTP and HTTPS URLs are supported.");
+    if (base.username || base.password) throw new Error("Remove credentials from the URL and use an Authorization header.");
+    let path = $("path").value.trim() || "/";
+    const vars = Object.fromEntries(readRows($("pathRows")));
+    path = path.replace(/\{([^}]+)\}/g, (match,key) => {
+      if (!(key in vars)) throw new Error("Missing path variable: " + key);
+      return encodeURIComponent(vars[key]);
+    });
+    while (path.startsWith("/")) path = path.slice(1);
+    const url = new URL(path,base.href.endsWith("/") ? base.href : base.href + "/");
+    for (const [key,value] of readRows($("queryRows"))) url.searchParams.append(key,value);
+    return url;
   }
 
-  function requestTab(name) {
-    document.querySelectorAll("[data-request-tab]").forEach(button => button.classList.toggle("active", button.dataset.requestTab === name));
-    ["params","pathvars","headers","body"].forEach(tab => $("tab-" + tab).hidden = tab !== name);
+  function requestHeaders(method) {
+    const result = new Headers();
+    for (const [key,value] of readRows($("headerRows"))) {
+      if (["GET","HEAD"].includes(method) && key.toLowerCase() === "content-type") continue;
+      try { result.append(key,value); }
+      catch { throw new Error("Invalid header: " + key); }
+    }
+    if (!["GET","HEAD"].includes(method) && !result.has("Content-Type")) {
+      if ($("bodyType").value === "json") result.set("Content-Type","application/json");
+      if ($("bodyType").value === "form") result.set("Content-Type","application/x-www-form-urlencoded;charset=UTF-8");
+      if ($("bodyType").value === "text") result.set("Content-Type","text/plain;charset=UTF-8");
+    }
+    return result;
   }
 
-  function responseTab(name) {
-    document.querySelectorAll("[data-response-tab]").forEach(button => button.classList.toggle("active", button.dataset.responseTab === name));
-    $("responseBodyView").hidden = name !== "body";
-    $("responseHeadersView").hidden = name !== "headers";
+  function requestBody(method, headers) {
+    if (["GET","HEAD"].includes(method)) return undefined;
+    const body = $("body").value;
+    if (!body.trim()) return undefined;
+    if ($("bodyType").value === "json") {
+      try { JSON.parse(body); } catch { throw new Error("Request body is invalid JSON."); }
+      if (!headers.has("Content-Type")) headers.set("Content-Type","application/json");
+    }
+    return body;
   }
 
-  function setConnection(message, error = false) {
-    $("connectionStatus").replaceChildren();
-    const dot = document.createElement("span");
-    dot.className = "status-dot" + (error ? " muted-dot" : "");
-    const text = document.createElement("span");
-    text.textContent = message;
-    $("connectionStatus").append(dot, text);
-  }
-
-  function prettyText(text, contentType = "") {
-    if (!text) return "";
-    if (/json/i.test(contentType) || /^[\s]*[\[{]/.test(text)) {
-      try { return JSON.stringify(JSON.parse(text), null, 2); } catch {}
+  function formatBody(text,type) {
+    if (!text) return "(empty response)";
+    if (/json/i.test(type) || /^[\s]*[\[{]/.test(text)) {
+      try { return JSON.stringify(JSON.parse(text),null,2); } catch {}
     }
     return text;
   }
 
-  function setResponseBody(text, contentType = "") {
-    state.responseText = text;
-    state.responseBlobType = contentType || "text/plain";
-    $("responseBody").textContent = prettyText(text, contentType) || "(empty response)";
-    $("copyResponse").disabled = !text;
-    $("downloadResponse").disabled = !text;
-    $("responseSize").textContent = formatBytes(new TextEncoder().encode(text).length);
+  function sizeText(size) {
+    if (size < 1024) return size + " B";
+    if (size < 1048576) return (size/1024).toFixed(1) + " KB";
+    return (size/1048576).toFixed(2) + " MB";
   }
 
-  function formatBytes(value) {
-    if (value < 1024) return value + " B";
-    if (value < 1024 * 1024) return (value / 1024).toFixed(1) + " KB";
-    return (value / 1024 / 1024).toFixed(2) + " MB";
+  function setResponse(text,type) {
+    state.response = text; state.responseType = type || "text/plain";
+    $("responseBody").textContent = formatBody(text,type);
+    $("copy").disabled = !text;
+    $("export").disabled = !text;
+    $("size").textContent = sizeText(new TextEncoder().encode(text).length);
   }
 
-  function setResponseStatus(label, kind = "") {
-    const el = $("responseStatus");
-    el.textContent = label;
-    el.className = "response-status" + (kind ? " " + kind : "");
-  }
-
-  function buildUrl() {
-    const base = $("baseUrl").value.trim();
-    let path = $("path").value.trim();
-    if (!base) throw new Error("Enter a Server Base URL first.");
-    if (!path) path = "/";
-    const pathVars = {};
-    for (const row of $("pathRows").querySelectorAll(".kv-row")) {
-      const inputs = row.querySelectorAll("input");
-      if (inputs[0].value.trim()) pathVars[inputs[0].value.trim()] = inputs[1].value;
-    }
-    path = path.replace(/\{([^}]+)\}/g, (match, key) => {
-      if (!(key in pathVars)) throw new Error("Missing path variable: " + key);
-      return encodeURIComponent(pathVars[key]);
-    });
-    const baseUrl = new URL(base);
-    if (!["http:", "https:"].includes(baseUrl.protocol)) throw new Error("Only HTTP and HTTPS URLs are supported.");
-    while (path.startsWith("/")) path = path.slice(1);
-    const result = new URL(path, baseUrl.href.endsWith("/") ? baseUrl.href : baseUrl.href + "/");
-    for (const [key,value] of readRows($("queryRows"))) result.searchParams.append(key, value);
-    if (result.username || result.password) throw new Error("Credentials in the URL are not supported. Use an Authorization header.");
-    return result;
-  }
-
-  function currentRequestSummary(urlText = "") {
-    return { method: $("method").value, path: $("path").value.trim() || "/", url: urlText };
-  }
-
-  function buildHeaders(method) {
-    const headers = new Headers();
-    for (const [key,value] of readRows($("headerRows"))) {
-      if (["GET","HEAD"].includes(method) && key.toLowerCase() === "content-type") continue;
-      try { headers.append(key, value); }
-      catch { throw new Error("Invalid header name or value: " + key); }
-    }
-    const type = $("bodyType").value;
-    if (!["GET","HEAD"].includes(method) && !headers.has("Content-Type")) {
-      if (type === "json") headers.set("Content-Type", "application/json");
-      if (type === "form") headers.set("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8");
-      if (type === "text") headers.set("Content-Type", "text/plain;charset=UTF-8");
-    }
-    return headers;
-  }
-
-  function buildBody(headers, method) {
-    if (["GET","HEAD"].includes(method)) return undefined;
-    const raw = $("requestBody").value;
-    if (!raw.trim()) return undefined;
-    if ($("bodyType").value === "json") {
-      try { JSON.parse(raw); }
-      catch { throw new Error("Request body is not valid JSON."); }
-      if (!headers.has("Content-Type")) headers.set("Content-Type", "application/json");
-      return raw;
-    }
-    if ($("bodyType").value === "form") {
-      if (!headers.has("Content-Type")) headers.set("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8");
-      return raw;
-    }
-    return raw;
-  }
-
-  function renderResponseHeaders(headers) {
-    const lines = [];
-    headers.forEach((value, key) => lines.push(key + ": " + value));
-    lines.sort((a,b) => a.localeCompare(b));
-    state.responseHeaderText = lines.join("\n");
-    $("responseHeaders").textContent = state.responseHeaderText || "(no exposed response headers)";
-  }
-
-  function addHistory(item) {
+  function historyAdd(item) {
     state.history.unshift(item);
-    if (state.history.length > 30) state.history.pop();
+    if (state.history.length > 25) state.history.pop();
     renderHistory();
   }
 
   function renderHistory() {
-    const list = $("historyList");
-    list.replaceChildren();
+    const el = $("historyList"); el.replaceChildren();
     if (!state.history.length) {
-      const empty = document.createElement("div");
-      empty.className = "muted small history-empty";
-      empty.textContent = "Requests made this session appear here.";
-      list.appendChild(empty);
-      return;
+      const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "Requests appear here for this session."; el.append(empty); return;
     }
     for (const item of state.history) {
-      const button = document.createElement("button");
-      button.className = "history-item";
-      button.type = "button";
-      const badge = document.createElement("span");
-      badge.className = "method-badge " + METHOD_CLASS(item.method);
-      badge.textContent = item.method;
-      const label = document.createElement("span");
-      label.className = "history-label";
-      label.textContent = item.path;
-      button.append(badge, label);
-      button.title = item.url;
-      button.addEventListener("click", () => {
-        $("method").value = item.method;
-        $("path").value = item.path;
-        syncPathRows();
-        requestTab("params");
-      });
-      list.appendChild(button);
+      const b = document.createElement("button"); b.className = "history-item";
+      const badge = document.createElement("span"); badge.className = "method " + ("m-" + item.method.toLowerCase()); badge.textContent = item.method;
+      const path = document.createElement("span"); path.className = "history-path"; path.textContent = item.path; path.title = item.url;
+      b.append(badge,path);
+      b.addEventListener("click",() => { $("method").value=item.method; $("path").value=item.path; syncPathRows(); });
+      el.append(b);
     }
   }
 
-  async function sendRequest() {
-    if (state.activeController) return;
-    let url;
-    try {
-      url = buildUrl();
-    } catch (error) {
-      setConnection(error.message, true);
-      setResponseStatus("REQUEST INVALID", "error");
-      $("responseSummary").textContent = error.message;
-      $("responseBody").textContent = error.message;
-      responseTab("body");
-      return;
-    }
-
+  async function send() {
+    if (state.active) return;
+    let url, headers, body;
     const method = $("method").value;
-    let headers, body;
     try {
-      headers = buildHeaders(method);
-      body = buildBody(headers, method);
+      url = makeUrl();
+      headers = requestHeaders(method);
+      body = requestBody(method,headers);
     } catch (error) {
-      setConnection(error.message, true);
-      setResponseStatus("REQUEST INVALID", "error");
       $("responseSummary").textContent = error.message;
+      $("statusCode").textContent = "INVALID REQUEST";
+      $("statusCode").className = "status-code bad";
       $("responseBody").textContent = error.message;
-      responseTab("body");
-      return;
+      showView("body"); status("REQUEST INVALID",true); return;
     }
 
     const controller = new AbortController();
-    state.activeController = controller;
-    const timeout = setTimeout(() => controller.abort(new DOMException("Request timed out after 45 seconds.", "TimeoutError")), 45000);
-    $("sendRequest").disabled = true;
-    $("cancelRequest").disabled = false;
+    state.active = controller;
+    const timeout = setTimeout(() => controller.abort(),45000);
+    $("send").disabled = true; $("cancel").disabled = false;
     $("requestNote").textContent = "Sending request…";
     $("responseSummary").textContent = method + " " + url.href;
-    setConnection("Request in progress");
-    setResponseStatus("PENDING");
-    $("responseDuration").textContent = "—";
-    setResponseBody("", "");
-    $("responseHeaders").textContent = "(waiting for headers)";
-    responseTab("body");
+    $("statusCode").textContent = "PENDING"; $("statusCode").className = "status-code";
+    $("duration").textContent = "—"; $("responseBody").textContent = "Waiting for response…";
+    $("responseHeaders").textContent = "Waiting for response headers…";
+    showView("body"); status("REQUEST IN PROGRESS");
+    const start = performance.now();
 
-    const started = performance.now();
     try {
-      const response = await fetch(url.href, {
-        method,
-        headers,
-        body,
-        credentials: $("credentials").value,
-        cache: "no-store",
-        redirect: "follow",
-        signal: controller.signal
+      const response = await fetch(url.href,{
+        method,headers,body,credentials:$("credentials").value,cache:"no-store",redirect:"follow",signal:controller.signal
       });
       const text = method === "HEAD" ? "" : await response.text();
-      const elapsed = performance.now() - started;
-      setResponseStatus(response.status + " " + response.statusText, response.ok ? "ok" : response.status < 400 ? "redirect" : "error");
-      $("responseDuration").textContent = elapsed.toFixed(0) + " ms";
+      const elapsed = performance.now() - start;
+      $("statusCode").textContent = response.status + " " + response.statusText;
+      $("statusCode").className = "status-code " + (response.ok ? "ok" : "bad");
+      $("duration").textContent = elapsed.toFixed(0) + " ms";
       $("responseSummary").textContent = method + " " + url.href;
-      setResponseBody(text, response.headers.get("content-type") || "");
-      renderResponseHeaders(response.headers);
+      setResponse(text,response.headers.get("content-type") || "");
+      const lines=[]; response.headers.forEach((value,key)=>lines.push(key + ": " + value)); lines.sort();
+      $("responseHeaders").textContent = lines.join("\n") || "(No response headers exposed to JavaScript by CORS.)";
       $("requestNote").textContent = "Completed in " + elapsed.toFixed(0) + " ms.";
-      setConnection("Response received");
-      addHistory({method, path: $("path").value.trim() || "/", url: url.href, status: response.status, elapsed});
+      status("RESPONSE RECEIVED");
+      historyAdd({method,path:$("path").value.trim() || "/",url:url.href});
     } catch (error) {
-      const elapsed = performance.now() - started;
-      const message = error.name === "AbortError" || error.name === "TimeoutError"
-        ? "Request was cancelled or timed out."
-        : "Network request failed. Check the URL, server availability and CORS policy. Details: " + error.message;
-      setResponseStatus(error.name === "AbortError" ? "CANCELLED" : "NETWORK ERROR", "error");
-      $("responseDuration").textContent = elapsed.toFixed(0) + " ms";
+      const elapsed = performance.now() - start;
+      const message = error.name === "AbortError"
+        ? "Request cancelled or timed out."
+        : "Request failed. The server may be offline, CSP may block connect-src, or CORS may not allow this page's origin. Browser restrictions cannot be bypassed by this snippet. Details: " + error.message;
+      $("statusCode").textContent = error.name === "AbortError" ? "CANCELLED" : "NETWORK / CORS";
+      $("statusCode").className = "status-code bad";
+      $("duration").textContent = elapsed.toFixed(0) + " ms";
       $("responseSummary").textContent = method + " " + url.href;
-      setResponseBody(message, "text/plain");
-      $("responseHeaders").textContent = "(response headers unavailable)";
-      $("requestNote").textContent = message;
-      setConnection(error.name === "AbortError" ? "Request cancelled" : "Network / CORS error", true);
+      setResponse(message,"text/plain"); $("responseHeaders").textContent = "(Unavailable)";
+      $("requestNote").textContent = message; status("REQUEST FAILED",true);
     } finally {
-      clearTimeout(timeout);
-      state.activeController = null;
-      $("sendRequest").disabled = false;
-      $("cancelRequest").disabled = true;
+      clearTimeout(timeout); state.active = null;
+      $("send").disabled = false; $("cancel").disabled = true;
     }
-  }
-
-  function syncPathRows() {
-    const old = new Map();
-    for (const row of $("pathRows").querySelectorAll(".kv-row")) {
-      const inputs = row.querySelectorAll("input");
-      if (inputs[0].value) old.set(inputs[0].value, inputs[1].value);
-    }
-    const names = [...$("path").value.matchAll(/\{([^}]+)\}/g)].map(match => match[1]);
-    $("pathRows").replaceChildren();
-    for (const name of names) createKvRow($("pathRows"), name, old.get(name) || "");
-    if (!names.length) {
-      const note = document.createElement("div");
-      note.className = "muted small";
-      note.textContent = "No {pathVariables} detected in the request path.";
-      $("pathRows").appendChild(note);
-    }
-    updateBadges();
   }
 
   function renderEndpoints() {
-    const container = $("endpointGroups");
-    const filter = $("endpointSearch").value.trim().toLowerCase();
-    container.replaceChildren();
-    const filtered = state.endpoints.filter(endpoint =>
-      (endpoint.path + " " + endpoint.summary + " " + endpoint.method + " " + endpoint.tag).toLowerCase().includes(filter)
-    );
+    const list = $("endpointList"); list.replaceChildren();
+    const query = $("endpointSearch").value.trim().toLowerCase();
+    const entries = state.endpoints.filter(e => (e.method+" "+e.path+" "+e.summary+" "+e.tag).toLowerCase().includes(query));
     $("endpointCount").textContent = String(state.endpoints.length);
     if (!state.endpoints.length) {
-      const empty = document.createElement("div");
-      empty.className = "empty-state";
-      empty.innerHTML = '<div class="empty-symbol">⌘</div><div class="empty-title">No API schema</div><p>Load an OpenAPI / Swagger JSON document to browse endpoints, or create a request manually.</p>';
-      const button = document.createElement("button");
-      button.className = "text-button";
-      button.textContent = "Import schema →";
-      button.addEventListener("click", openSpecDrawer);
-      empty.appendChild(button);
-      container.appendChild(empty);
-      return;
+      const empty = document.createElement("div"); empty.className = "empty";
+      empty.textContent = "No OpenAPI schema loaded. Try FIND SPEC or import a JSON file.";
+      list.append(empty); return;
     }
-    if (!filtered.length) {
-      const empty = document.createElement("div");
-      empty.className = "empty-state";
-      empty.textContent = "No endpoints match this filter.";
-      container.appendChild(empty);
-      return;
+    if (!entries.length) {
+      const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "No endpoints match this filter."; list.append(empty); return;
     }
-    const groups = new Map();
-    for (const endpoint of filtered) {
-      const tag = endpoint.tag || "DEFAULT";
-      if (!groups.has(tag)) groups.set(tag, []);
-      groups.get(tag).push(endpoint);
-    }
-    for (const [tag, endpoints] of groups) {
-      const label = document.createElement("div");
-      label.className = "endpoint-group-label";
-      label.textContent = tag + " · " + endpoints.length;
-      container.appendChild(label);
-      for (const endpoint of endpoints) {
-        const button = document.createElement("button");
-        button.className = "endpoint-item";
-        button.type = "button";
-        const badge = document.createElement("span");
-        badge.className = "method-badge " + METHOD_CLASS(endpoint.method);
-        badge.textContent = endpoint.method;
-        const texts = document.createElement("span");
-        texts.className = "endpoint-text";
-        const path = document.createElement("span");
-        path.className = "endpoint-path";
-        path.textContent = endpoint.path;
-        const summary = document.createElement("span");
-        summary.className = "endpoint-summary";
-        summary.textContent = endpoint.summary || endpoint.operationId || "";
-        texts.append(path, summary);
-        button.append(badge, texts);
-        button.title = endpoint.path;
-        button.addEventListener("click", () => {
-          $("method").value = endpoint.method;
-          $("path").value = endpoint.path;
-          if (endpoint.server) $("baseUrl").value = endpoint.server;
-          syncPathRows();
-          rowsFromObject($("queryRows"), {});
-          if (endpoint.parameters?.length) {
-            const query = {};
-            for (const param of endpoint.parameters) {
-              if (param.in === "query") query[param.name] = param.example ?? param.schema?.default ?? "";
-            }
-            rowsFromObject($("queryRows"), query);
-          }
-          button.blur();
-          container.querySelectorAll(".endpoint-item").forEach(item => item.classList.toggle("selected", item === button));
-          requestTab(endpoint.parameters?.some(p => p.in === "path") ? "pathvars" : "params");
-        });
-        container.appendChild(button);
+    let currentTag = null;
+    for (const endpoint of entries) {
+      if (endpoint.tag !== currentTag) {
+        currentTag = endpoint.tag;
+        const group = document.createElement("div"); group.className = "group-label"; group.textContent = currentTag; list.append(group);
       }
+      const button = document.createElement("button"); button.className = "endpoint";
+      const method = document.createElement("span"); method.className = "method m-" + endpoint.method.toLowerCase(); method.textContent = endpoint.method;
+      const text = document.createElement("span");
+      const path = document.createElement("span"); path.className = "ep-path"; path.textContent = endpoint.path;
+      const summary = document.createElement("span"); summary.className = "ep-summary"; summary.textContent = endpoint.summary || endpoint.operationId || "";
+      text.append(path,summary); button.append(method,text); button.title = endpoint.path;
+      button.addEventListener("click",() => {
+        $("method").value = endpoint.method; $("path").value = endpoint.path;
+        if (endpoint.server && !endpoint.server.includes("{")) $("baseUrl").value = endpoint.server;
+        syncPathRows(); fillRows($("queryRows"),{});
+        const queryParams={};
+        for (const p of endpoint.parameters || []) if (p.in === "query") queryParams[p.name] = p.example ?? p.schema?.default ?? "";
+        fillRows($("queryRows"),queryParams);
+        if (endpoint.parameters?.some(p=>p.in==="path")) showRequestTab("pathvars"); else showRequestTab("params");
+        list.querySelectorAll(".endpoint").forEach(el=>el.classList.toggle("selected",el===button));
+      });
+      list.append(button);
     }
   }
 
-  function parseOpenApi(documentObject) {
-    if (!documentObject || typeof documentObject !== "object" || !documentObject.paths || typeof documentObject.paths !== "object") {
-      throw new Error("This JSON does not look like an OpenAPI / Swagger document (missing paths).");
+  function parseSpec(doc) {
+    if (!doc || typeof doc !== "object" || !doc.paths || typeof doc.paths !== "object") throw new Error("Missing paths. Import an OpenAPI / Swagger JSON document.");
+    let server = doc.servers?.[0]?.url || (doc.host ? (doc.schemes?.[0] || "https") + "://" + doc.host + (doc.basePath || "") : "");
+    if (server && !/^https?:\/\//i.test(server)) {
+      try { server = new URL(server,location.origin).href; } catch {}
     }
-    let serverUrl = documentObject.servers?.[0]?.url
-      || documentObject.host && ((documentObject.schemes?.[0] || "https") + "://" + documentObject.host + (documentObject.basePath || ""))
-      || "";
-    if (serverUrl && !/^https?:\/\//i.test(serverUrl)) {
-      try { serverUrl = new URL(serverUrl, location.origin).href; } catch {}
-    }
-    const endpoints = [];
-    for (const [path, pathItem] of Object.entries(documentObject.paths)) {
-      if (!pathItem || typeof pathItem !== "object") continue;
-      const sharedParams = Array.isArray(pathItem.parameters) ? pathItem.parameters : [];
-      for (const method of METHOD_ORDER) {
-        const operation = pathItem[method];
-        if (!operation || typeof operation !== "object") continue;
-        const mergedParams = [...sharedParams, ...(Array.isArray(operation.parameters) ? operation.parameters : [])];
-        endpoints.push({
-          method: method.toUpperCase(),
-          path,
-          summary: operation.summary || operation.description?.split(/\n/)[0] || "",
-          operationId: operation.operationId || "",
-          tag: operation.tags?.[0] || "DEFAULT",
-          server: operation.servers?.[0]?.url || serverUrl,
-          parameters: mergedParams
+    const results = [];
+    for (const [path,item] of Object.entries(doc.paths)) {
+      if (!item || typeof item !== "object") continue;
+      for (const method of methods) {
+        const op = item[method];
+        if (!op || typeof op !== "object") continue;
+        const params = [...(item.parameters || []),...(op.parameters || [])];
+        results.push({
+          method:method.toUpperCase(),path,
+          summary:op.summary || (op.description || "").split("\n")[0],
+          operationId:op.operationId || "",tag:op.tags?.[0] || "DEFAULT",
+          server:op.servers?.[0]?.url || server,parameters:params
         });
       }
     }
-    state.schema = documentObject;
-    state.endpoints = endpoints.sort((a,b) => a.tag.localeCompare(b.tag) || a.path.localeCompare(b.path) || METHOD_ORDER.indexOf(a.method.toLowerCase()) - METHOD_ORDER.indexOf(b.method.toLowerCase()));
-    if (serverUrl && !state.endpoints.length) $("baseUrl").value = serverUrl;
-    if (serverUrl && !$("baseUrl").value.trim()) $("baseUrl").value = serverUrl;
-    $("specStatus").textContent = "Loaded " + endpoints.length + " endpoints" + (documentObject.info?.title ? " from " + documentObject.info.title : "") + ".";
-    setConnection("OpenAPI schema loaded");
-    renderEndpoints();
-    setResponseStatus("SPEC LOADED", "ok");
-    $("responseSummary").textContent = $("specStatus").textContent;
-    $("responseBody").textContent = JSON.stringify({title: documentObject.info?.title || "", version: documentObject.info?.version || "", endpointCount: endpoints.length}, null, 2);
-    return endpoints.length;
+    results.sort((a,b)=>a.tag.localeCompare(b.tag)||a.path.localeCompare(b.path)||methods.indexOf(a.method.toLowerCase())-methods.indexOf(b.method.toLowerCase()));
+    state.schema = doc; state.endpoints = results;
+    if (server && !$("baseUrl").value.trim()) $("baseUrl").value = server;
+    $("specMsg").textContent = "Loaded " + results.length + " endpoints" + (doc.info?.title ? " · " + doc.info.title : "");
+    status("OPENAPI LOADED"); renderEndpoints();
+    $("responseSummary").textContent = $("specMsg").textContent;
+    $("responseBody").textContent = JSON.stringify({title:doc.info?.title || "",version:doc.info?.version || "",endpoints:results.length},null,2);
+    $("statusCode").textContent = "SPEC LOADED"; $("statusCode").className = "status-code ok";
+    return results.length;
   }
 
-  async function loadSpecFromUrl() {
-    const url = $("specUrl").value.trim();
-    if (!url) {
-      $("specStatus").textContent = "Enter an OpenAPI JSON URL.";
-      return;
-    }
-    $("specStatus").textContent = "Loading spec…";
+  async function loadSpec() {
+    const value = $("specUrl").value.trim();
+    if (!value) { $("specMsg").textContent = "Enter an OpenAPI JSON URL or paste/import a file."; return; }
     try {
-      const response = await fetch(url, {cache:"no-store"});
-      if (!response.ok) throw new Error("HTTP " + response.status + " while loading spec.");
-      const text = await response.text();
-      $("specText").value = text;
-      parseOpenApi(JSON.parse(text));
-    } catch (error) {
-      $("specStatus").textContent = "Could not load spec: " + error.message + ". Try importing a local JSON file or pasting JSON.";
-      setConnection("Spec import failed", true);
-    }
-  }
-
-  function openSpecDrawer() {
-    $("specDrawer").hidden = false;
-    $("specText").focus();
-  }
-
-  $("toggleSpec").addEventListener("click", () => $("specDrawer").hidden = !$("specDrawer").hidden);
-  $("closeSpec").addEventListener("click", () => $("specDrawer").hidden = true);
-  $("loadSpecUrl").addEventListener("click", loadSpecFromUrl);
-  $("parseSpec").addEventListener("click", () => {
-    try { parseOpenApi(JSON.parse($("specText").value)); }
-    catch(error) { $("specStatus").textContent = "Spec parse error: " + error.message; }
-  });
-  $("chooseSpecFile").addEventListener("click", () => $("specFile").click());
-  $("specFile").addEventListener("change", async event => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    try {
-      const text = await file.text();
-      $("specText").value = text;
-      parseOpenApi(JSON.parse(text));
-      $("specDrawer").hidden = true;
+      $("specMsg").textContent = "Loading spec from " + value + "…";
+      const response = await fetch(value,{cache:"no-store"});
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      const text = await response.text(); $("specText").value = text;
+      parseSpec(JSON.parse(text)); $("specDrawer").hidden = true;
     } catch(error) {
-      $("specStatus").textContent = "Import failed: " + error.message + ". JSON files are supported; convert YAML to JSON first.";
-      $("specDrawer").hidden = false;
-    } finally {
-      event.target.value = "";
+      $("specMsg").textContent = "Load failed: " + error.message + ". Try importing a local JSON file or paste its JSON. CORS/CSP can block cross-origin fetch.";
+      status("SPEC LOAD FAILED",true);
     }
-  });
+  }
 
-  $("addQuery").addEventListener("click", () => createKvRow($("queryRows")));
-  $("addHeader").addEventListener("click", () => createKvRow($("headerRows")));
-  $("sendRequest").addEventListener("click", sendRequest);
-  $("cancelRequest").addEventListener("click", () => {
-    if (state.activeController) state.activeController.abort();
-  });
-  $("path").addEventListener("input", () => { syncPathRows(); });
-  $("endpointSearch").addEventListener("input", renderEndpoints);
-  $("clearHistory").addEventListener("click", () => { state.history = []; renderHistory(); });
-  document.querySelectorAll("[data-request-tab]").forEach(button => button.addEventListener("click", () => requestTab(button.dataset.requestTab)));
-  document.querySelectorAll("[data-response-tab]").forEach(button => button.addEventListener("click", () => responseTab(button.dataset.responseTab)));
-
-  $("copyResponse").addEventListener("click", async () => {
-    const text = state.responseText;
-    try {
-      await navigator.clipboard.writeText(text);
-      $("copyResponse").textContent = "COPIED";
-      setTimeout(() => $("copyResponse").textContent = "COPY", 900);
-    } catch {
-      setConnection("Clipboard permission denied", true);
+  async function discoverSpec() {
+    const base = $("baseUrl").value.trim();
+    if (!base) { status("ENTER BASE URL FIRST",true); $("requestNote").textContent = "Enter the server's base URL before searching common schema paths."; return; }
+    let origin;
+    try { origin = new URL(base).origin; } catch { status("INVALID BASE URL",true); return; }
+    const candidates = [
+      "/openapi.json","/openapi.yaml","/swagger.json","/swagger/v1/swagger.json",
+      "/v3/api-docs","/api-docs","/api/openapi.json","/.well-known/openapi.json",
+      "/openapi/v1.json","/swagger/doc.json"
+    ];
+    $("specMsg").textContent = "Checking common OpenAPI locations…";
+    $("specDrawer").hidden = false;
+    for (const path of candidates) {
+      try {
+        const response = await fetch(new URL(path,origin).href,{cache:"no-store",headers:{Accept:"application/json"}});
+        if (!response.ok) continue;
+        const text = await response.text();
+        let doc;
+        try { doc=JSON.parse(text); } catch { continue; }
+        if (doc && doc.paths) {
+          $("specUrl").value = new URL(path,origin).href;
+          $("specText").value = text;
+          parseSpec(doc);
+          $("specMsg").textContent = "Found a schema at " + path;
+          return;
+        }
+      } catch {}
     }
+    $("specMsg").textContent = "No common JSON schema found or browser blocked requests by CORS/CSP. Import the server's OpenAPI JSON manually. This does not brute-force undocumented routes.";
+    status("SCHEMA NOT FOUND",true);
+  }
+
+  $("specToggle").addEventListener("click",()=>$("specDrawer").hidden=!$("specDrawer").hidden);
+  $("closeSpec").addEventListener("click",()=>$("specDrawer").hidden=true);
+  $("loadSpec").addEventListener("click",loadSpec);
+  $("discover").addEventListener("click",discoverSpec);
+  $("parseSpec").addEventListener("click",()=>{
+    try { parseSpec(JSON.parse($("specText").value)); }
+    catch(error) { $("specMsg").textContent = "Parse error: " + error.message; }
+  });
+  $("importFile").addEventListener("click",()=>$("file").click());
+  $("file").addEventListener("change",async event=>{
+    const file=event.target.files?.[0]; if(!file)return;
+    try { const text=await file.text(); $("specText").value=text; parseSpec(JSON.parse(text)); }
+    catch(error) { $("specMsg").textContent="Import failed: "+error.message+". JSON is supported; convert YAML to JSON first."; $("specDrawer").hidden=false; }
+    finally { event.target.value=""; }
+  });
+  $("addQuery").addEventListener("click",()=>addRow($("queryRows")));
+  $("addHeader").addEventListener("click",()=>addRow($("headerRows")));
+  $("path").addEventListener("input",syncPathRows);
+  $("endpointSearch").addEventListener("input",renderEndpoints);
+  $("clearHistory").addEventListener("click",()=>{state.history=[];renderHistory();});
+  $("send").addEventListener("click",send);
+  $("cancel").addEventListener("click",()=>state.active?.abort());
+  shadow.querySelectorAll("[data-rtab]").forEach(button=>button.addEventListener("click",()=>showRequestTab(button.dataset.rtab)));
+  shadow.querySelectorAll("[data-vtab]").forEach(button=>button.addEventListener("click",()=>showView(button.dataset.vtab)));
+  $("copy").addEventListener("click",async()=>{
+    try { await navigator.clipboard.writeText(state.response); $("copy").textContent="COPIED"; setTimeout(()=>$("copy").textContent="COPY",900); }
+    catch { $("requestNote").textContent="Clipboard access denied by the browser."; }
+  });
+  $("export").addEventListener("click",()=>{
+    const blob=new Blob([state.response],{type:state.responseType || "text/plain"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download="api-response.txt"; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+  });
+  $("method").addEventListener("change",()=>{$("body").placeholder=["GET","HEAD"].includes($("method").value)?"Body is ignored for GET and HEAD.":'{"example":true}';});
+  $("min").addEventListener("click",()=>{
+    const hidden=$("app").classList.toggle("minimized");
+    $("min").textContent=hidden?"RESTORE":"MINIMIZE";
+    $("app").style.height=hidden?"54px":"calc(100vh - 32px)";
+  });
+  $("close").addEventListener("click",()=>{host.remove();delete window.__THE_CONSOLE_HELPER_API_CONSOLE;});
+  let drag=false,dx=0,dy=0;
+  $("drag").addEventListener("pointerdown",event=>{
+    if(event.target.closest("button"))return;
+    const r=host.getBoundingClientRect();drag=true;dx=event.clientX-r.left;dy=event.clientY-r.top;
+    $("drag").setPointerCapture(event.pointerId);
+  });
+  $("drag").addEventListener("pointermove",event=>{
+    if(!drag)return;
+    host.style.left=clamp(event.clientX-dx,0,innerWidth-host.offsetWidth)+"px";
+    host.style.top=clamp(event.clientY-dy,0,innerHeight-host.offsetHeight)+"px";
+    host.style.right="auto";
+  });
+  $("drag").addEventListener("pointerup",()=>drag=false);
+  $("drag").addEventListener("pointercancel",()=>drag=false);
+  window.addEventListener("resize",()=>{
+    host.style.maxWidth="calc(100vw - 16px)";
+    if(host.getBoundingClientRect().right>innerWidth)host.style.left=Math.max(0,innerWidth-host.offsetWidth)+"px";
+    if(host.getBoundingClientRect().bottom>innerHeight)host.style.top=Math.max(0,innerHeight-host.offsetHeight)+"px";
   });
 
-  $("downloadResponse").addEventListener("click", () => {
-    const blob = new Blob([state.responseText], {type: state.responseBlobType || "text/plain"});
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "api-response-" + new Date().toISOString().replace(/[:.]/g,"-") + ".txt";
-    link.click();
-    URL.revokeObjectURL(url);
-  });
-
-  document.addEventListener("keydown", event => {
-    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-      event.preventDefault();
-      sendRequest();
-    }
-    if (event.key === "/" && !["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName)) {
-      event.preventDefault();
-      $("endpointSearch").focus();
-    }
-    if (event.key === "Escape" && state.activeController) state.activeController.abort();
-  });
-
-  $("method").addEventListener("change", () => {
-    const method = $("method").value;
-    $("requestBody").placeholder = method === "GET" || method === "HEAD" ? "Body is not sent for this method" : '{\n  "example": true\n}';
-  });
-
-  $("bodyType").addEventListener("change", () => {
-    const builtInTypes = new Set([
-      "application/json",
-      "application/x-www-form-urlencoded;charset=utf-8",
-      "text/plain;charset=utf-8"
-    ]);
-    const row = [...$("headerRows").querySelectorAll(".kv-row")]
-      .find(item => item.querySelectorAll("input")[0].value.trim().toLowerCase() === "content-type");
-    if (!row) return;
-    const valueInput = row.querySelectorAll("input")[1];
-    if (!builtInTypes.has(valueInput.value.trim().toLowerCase())) return;
-    const types = {
-      json: "application/json",
-      form: "application/x-www-form-urlencoded;charset=UTF-8",
-      text: "text/plain;charset=UTF-8"
-    };
-    valueInput.value = types[$("bodyType").value];
-  });
-
-  createKvRow($("headerRows"), "Content-Type", "application/json");
-  createKvRow($("queryRows"));
+  addRow($("headerRows"),"Accept","application/json");
+  addRow($("queryRows"));
   syncPathRows();
-  updateBadges();
   renderEndpoints();
-  setConnection("Ready");
+  status("READY");
+  window.__THE_CONSOLE_HELPER_API_CONSOLE = {
+    close:()=>{$("close").click();},
+    send,
+    loadSpec,
+    discoverSpec,
+    get endpoints(){return state.endpoints.length;}
+  };
+  console.info("The Console Helper API Console injected. Press CLOSE in the panel or run window.__THE_CONSOLE_HELPER_API_CONSOLE.close() to remove it.");
 })();
