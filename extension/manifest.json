@@ -1,10 +1,26 @@
 {
   "manifest_version": 3,
   "name": "Server Trace — API Inspector",
-  "version": "1.0.0",
-  "description": "A standalone side panel for inspecting API endpoint references on the current tab.",
-  "permissions": ["activeTab", "scripting", "sidePanel"],
-  "background": {"service_worker": "service-worker.js"},
-  "action": {"default_title": "Open Server Trace"},
-  "side_panel": {"default_path": "sidepanel.html"}
+  "version": "1.1.0",
+  "description": "A Chrome side panel with an isolated JavaScript console, local JS runner, and API endpoint inspector.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "sidePanel"
+  ],
+  "background": {
+    "service_worker": "service-worker.js"
+  },
+  "action": {
+    "default_title": "Open Server Trace"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  },
+  "sandbox": {
+    "pages": [
+      "sandbox.html"
+    ],
+    "content_security_policy": "sandbox allow-scripts; default-src 'none'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'none'; img-src data:; object-src 'none'; form-action 'none'; base-uri 'none'"
+  }
 }
