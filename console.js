@@ -552,7 +552,11 @@
       const isNetworkCall = initiator === "fetch" || initiator === "xmlhttprequest" || initiator === "beacon";
       const parsed = (() => { try { return new URL(entry.name); } catch { return null; } })();
       if (!parsed) continue;
-      if (isNetworkCall || urlIsApiLike(parsed, initiator)) push(entry.name, isNetworkCall ? (initiator === "xmlhttprequest" ? "XHR resource" : "Fetch resource") : "API-like resource", initiator);
+      if (isNetworkCall || urlIsApiLike(parsed, initiator)) {
+        const source = isNetworkCall ? (initiator === "xmlhttprequest" ? "XHR resource" : "Fetch resource") : "API-like resource";
+        push(entry.name, source, initiator);
+        rememberApiUrl(entry.name, source, isNetworkCall || urlIsApiLike(parsed, initiator), location.href);
+      }
     }
 
     for (const script of document.scripts) {
@@ -644,8 +648,13 @@
     const apiOrigins = [...state.discoveredServers].sort((a,b) => b.score - a.score || b.count - a.count);
     if (!$("baseUrl").value.trim()) {
       $("baseUrl").value = apiOrigins[0]?.origin || (/^https?:$/.test(location.protocol) ? location.origin : "");
-    } else if (apiOrigins.length && new URL($("baseUrl").value).origin === location.origin && apiOrigins[0].origin !== location.origin && apiOrigins[0].score > 4) {
-      $("baseUrl").value = apiOrigins[0].origin;
+    } else if (apiOrigins.length) {
+      try {
+        const configuredOrigin = new URL($("baseUrl").value).origin;
+        if (configuredOrigin === location.origin && apiOrigins[0].origin !== location.origin && apiOrigins[0].score > 4) $("baseUrl").value = apiOrigins[0].origin;
+      } catch {
+        $("baseUrl").value = apiOrigins[0].origin;
+      }
     }
     renderEndpoints();
     renderDiscoveredServers();
@@ -671,7 +680,7 @@
   $("loadSpec").addEventListener("click",loadSpec);
   $("discover").addEventListener("click",discoverSpec);
   $("scanPage").addEventListener("click",()=>scanCurrentPage($("deepScanToggle").checked));
-  $("cancelScan").addEventListener("click",()=>{ if(state.scanController){state.scanController.abort();state.scanRunId++;$("scanPage").disabled=false;$("cancelScan").disabled=true;} });
+  $("cancelScan").addEventListener("click",()=>{ if(state.scanController){state.scanController.abort();$("scanStatus").textContent="Cancelling scan…";$("cancelScan").disabled=true;} });
   $("baseUrl").addEventListener("input",renderDiscoveredServers);
   $("parseSpec").addEventListener("click",()=>{
     try { parseSpec(JSON.parse($("specText").value)); }
