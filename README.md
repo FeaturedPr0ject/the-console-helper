@@ -1,46 +1,44 @@
-# The Console Helper
+# Server Trace
 
-A standalone JavaScript snippet that injects a gray, square-corner API workbench into the current page from Chrome DevTools Console. It is not a separate HTML app and does not use React.
+A standalone Windows desktop app for discovering API endpoint references and auditing public page code. This repository no longer uses DevTools JavaScript snippets.
 
-## Run
+## Get the Windows EXE
 
-1. Open the raw script: https://raw.githubusercontent.com/FeaturedPr0ject/the-console-helper/main/console.js
-2. Copy the full file.
-3. Open the page to inspect, press `Ctrl+Shift+J`, paste the complete source into DevTools Console, and press Enter.
+The GitHub Actions workflow builds a self-contained Windows x64 executable.
 
-On strict-CSP pages, do not load the snippet using `fetch(raw.githubusercontent.com/...)` from the page console; `connect-src` may block that connection. Copy the raw source and paste it directly.
+1. Open the [Actions page](https://github.com/FeaturedPr0ject/the-console-helper/actions).
+2. Select **Build Windows EXE** and open the latest successful run.
+3. Download the **ServerTrace-win-x64** artifact and extract `ServerTrace.exe`.
 
-## Find API servers on the current page
+The first workflow run starts after the project/workflow commits are pushed. If no artifact is available yet, open **Build Windows EXE** and choose **Run workflow**.
 
-The panel runs a quick scan automatically and has a **SCAN CURRENT PAGE** button with a progress bar. It inspects the browser's existing Performance Resource Timing entries, fetch/XHR URLs, inline scripts, and API-like DOM references. Found host origins appear as clickable server chips; selecting one fills SERVER BASE URL. Discovered paths appear in API EXPLORER. Since browser timing APIs do not expose the HTTP method for every request, discovered resource entries default to GET and are labeled as an assumption.
+## Build on Windows
 
-Enable **DEEP SCAN SCRIPTS** to try reading up to 30 same-origin JavaScript bundles and search for API base URLs and route strings. The progress bar reports progress and the Cancel button stops the scan.
+Install the .NET 8 SDK, clone this repository, then run:
 
-If you paste a complete URL such as `https://api.example.com/v1/users` into the request path field, the snippet splits its origin into SERVER BASE URL and retains its path automatically when you send.
+```bat
+build-windows.bat
+```
 
-## Other features
+The standalone app will be written to `publish\ServerTrace.exe`.
 
-- HTTP methods: GET, POST, PUT, PATCH, DELETE, HEAD and OPTIONS
-- Path variables, query parameters, custom headers and JSON/text/form bodies
-- Response status, duration, body, response headers exposed by CORS, copy and export
-- OpenAPI / Swagger 2.0 and OpenAPI 3.x JSON import from URL, pasted text, or a local JSON file
-- Find common OpenAPI schema paths from the chosen base URL
-- Searchable endpoints and request history for the current panel session
+## Use
 
-## Limits
+1. Run `ServerTrace.exe`.
+2. Enter an `https://` or `http://` page URL you are authorized to inspect.
+3. Select **SCAN SITE**.
+4. Review **API ENDPOINTS**, **EXPOSURE AUDIT**, and **ACTIVITY**.
+5. Select **EXPORT REPORT** to save a sanitized JSON report.
 
-This is a browser-context scanner, not a network proxy. It can inspect URLs the current page has already requested and source text the browser allows it to read. It cannot reveal endpoints that were never loaded, infer every hidden route, read cross-origin scripts without permission, or bypass CORS/CSP. OpenAPI URLs and API requests may be blocked by the current page's policy. Some response headers are hidden unless the API server exposes them through CORS.
+## What it checks
 
-Use it only for websites and APIs you are allowed to inspect. Avoid entering production secrets on shared or untrusted devices.
+- API-looking URLs referenced in page HTML and same-origin JavaScript bundles.
+- Up to 30 same-origin script resources, with size limits.
+- Common patterns that might indicate exposed credentials in embedded page code. The tool reports only the pattern category and source, never the matched value.
+- Sensitive URL query parameters are redacted in the displayed/exported endpoint list.
 
-## Server Trace / Local Audit
+## Limits and privacy
 
-A separate, local-only console for auditing the currently open page:
+This app is a local audit helper, not a browser debugger or network proxy. It does not access browser cookies, session storage, login sessions, or authorization headers; does not retrieve or reveal tokens; and does not send requests to discovered API endpoints. It only fetches the user-entered page and up to 30 same-origin script resources. Cross-origin script contents are not fetched. Endpoint discovery is best-effort and can miss dynamically generated routes. Pattern matches can be false positives.
 
-1. Open https://raw.githubusercontent.com/FeaturedPr0ject/the-console-helper/main/server-audit.js
-2. Copy the complete JavaScript source.
-3. Open Chrome DevTools Console on the page you are authorized to inspect, paste the source, and press Enter.
-
-It lists already-observed fetch/XHR URLs and API-looking references, redacts sensitive query parameters, checks embedded inline scripts for common secret-shaped patterns without showing their values, and lists localStorage/sessionStorage key names only. It does not send network requests, read cookies or authorization headers, fetch external script bodies, or collect storage values. Pattern matches can be false positives and require manual review.
-
-This tool is a local audit helper, not a token extractor. Use it only on pages and systems you are authorized to inspect.
+Use it only on systems you own or are explicitly authorized to inspect. Do not use discovered URLs to access accounts or services without permission.
