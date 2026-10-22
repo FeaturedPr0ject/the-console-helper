@@ -19,7 +19,7 @@ To update later, download/extract the latest repository ZIP and select **Reload*
 - Inspect resource URLs already recorded by the current page and API-like references in its DOM and inline scripts.
 - Filter discovered endpoint candidates and copy sanitized URLs.
 - Export a sanitized JSON report.
-- A **CONSOLE** tab for JavaScript commands and running local `.js` files in an isolated sandbox. Use `Ctrl+Enter` to run the current command.
+- A **CONSOLE** tab for JavaScript commands and running local `.js` files in an isolated sandbox. Use `Ctrl+Enter` to run the current command. The console exposes sanitized `pageInfo`, `endpoints`, `findEndpoints(query)`, and persistent `state` helpers.
 - Check inline page code for common secret-shaped patterns. The extension reports only the pattern category/source and never displays or exports matched values.
 - Dark/light styling follows the browser's system color preference.
 
