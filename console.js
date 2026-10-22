@@ -525,7 +525,10 @@
       raw = raw.replace(/[),.;}\]]+$/g, "");
       let url;
       try { url = new URL(raw, referenceUrl); } catch { continue; }
-      if (!urlIsApiLike(url, source, true)) continue;
+      const startAt = text.indexOf(raw);
+      const context = text.slice(Math.max(0, startAt - 100), Math.min(text.length, startAt + raw.length + 100));
+      const apiContext = /api[_-]?(?:base|url|host|server|endpoint)?|base[_-]?url|endpoint|graphql|rest[_-]?url|service[_-]?url/i.test(context);
+      if (!urlIsApiLike(url, source, true) && !apiContext) continue;
       const key = url.href;
       if (seen.has(key)) continue;
       seen.add(key);
@@ -662,7 +665,8 @@
     } else if (apiOrigins.length) {
       try {
         const configuredOrigin = new URL($("baseUrl").value).origin;
-        if (configuredOrigin === location.origin && apiOrigins[0].origin !== location.origin && apiOrigins[0].score > 4) $("baseUrl").value = apiOrigins[0].origin;
+        const pageOriginScore = apiOrigins.find(item => item.origin === location.origin)?.score || 0;
+        if (configuredOrigin === location.origin && apiOrigins[0].origin !== location.origin && (!pageOriginScore || apiOrigins[0].score > pageOriginScore)) $("baseUrl").value = apiOrigins[0].origin;
       } catch {
         $("baseUrl").value = apiOrigins[0].origin;
       }
