@@ -1,26 +1,30 @@
-# The Console Helper — API Workbench
+# The Console Helper
 
-A browser-based HTTP/API playground with a square-corner gray interface. No frameworks or third-party libraries are required.
+A standalone JavaScript snippet that injects a gray, square-corner API playground into the current page from Chrome DevTools Console. It is not a separate HTML app and does not use React.
+
+## Run from Chrome DevTools
+
+1. Open the raw script: https://raw.githubusercontent.com/FeaturedPr0ject/the-console-helper/main/console.js
+2. Copy the complete JavaScript source.
+3. Open the page where you want the panel, press `Ctrl+Shift+J`, paste the source into DevTools Console, and press Enter.
+
+On pages with strict Content Security Policy, do not use a `fetch(raw.githubusercontent.com/...)` loader from the page console: the page's `connect-src` can block that request. Copy the source from the raw file and paste it directly.
+
+The snippet creates its UI in Shadow DOM, so the gray API workbench's styles are isolated from the current page. Run it again to close an existing panel, or use its CLOSE button.
 
 ## Features
 
-- HTTP methods: GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
-- Server base URL and request path with URL-encoded path variables
-- Query parameters and custom request headers
-- JSON, plain text and URL-encoded request bodies
-- Response status, duration, response size, body and exposed headers
-- Import OpenAPI 3.x / Swagger 2.0 JSON by URL, pasted JSON or local file
-- Searchable endpoint explorer and request history for the current tab session
-- Cancel in-flight requests and export/copy response bodies
+- HTTP methods: GET, POST, PUT, PATCH, DELETE, HEAD and OPTIONS
+- Base URL, path variables, query parameters, custom headers, request body and credentials options
+- Response status, duration, body, available response headers, copy and export
+- OpenAPI / Swagger 2.0 and OpenAPI 3.x JSON import by URL, pasted content or local JSON file
+- Searches common OpenAPI JSON locations on a server when you choose **FIND SPEC**
+- Filterable endpoint list and request history for the current page session
 
-## Use
+## Limits
 
-Open `index.html` from a static host or serve the repository with a local HTTP server. Set a server base URL, type a path or load an OpenAPI JSON document, then press **SEND**. Use **Ctrl+Enter** to send the current request.
+The browser can list endpoints that are documented in an OpenAPI / Swagger schema. **FIND SPEC** checks a short list of conventional schema locations; it does not enumerate every undocumented route on a server.
 
-## Browser limitations
+Requests run in the current page's JavaScript context. The server must allow the page's origin through CORS; a page's Content Security Policy can also block network connections. The snippet cannot bypass these browser protections. Some response headers are only readable if the server exposes them via CORS.
 
-Requests are sent directly from the browser. A cross-origin API must permit the page's origin through CORS. Some APIs require preflight support for custom headers, authorization headers, or non-simple methods. Browser code cannot read response headers that the server does not expose through CORS. These browser restrictions cannot be bypassed by this page.
-
-Use test credentials where possible. This tool sends requests with the headers and credentials configured in the UI; do not paste production secrets into shared or untrusted computers. Request history is held in memory for the current page session and does not store header values.
-
-OpenAPI URLs must also allow browser CORS. If loading the spec URL is blocked, download the JSON file and use **IMPORT FILE**, or paste its JSON into the spec panel. YAML should be converted to JSON first.
+Use this only with servers you are authorized to test. Do not paste production secrets into a shared or untrusted browser session.
