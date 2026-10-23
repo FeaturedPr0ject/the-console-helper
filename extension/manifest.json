@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Server Trace — API Inspector",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "A Chrome side panel with an isolated JavaScript console, draggable in-page floating windows, and an API endpoint inspector.",
   "permissions": [
     "tabs",
