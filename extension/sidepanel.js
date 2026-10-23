@@ -2,6 +2,7 @@ const $ = (selector) => document.querySelector(selector);
 const state = { report: null, endpoints: [], currentTabId: null, targetTabInfo: null };
 const SENSITIVE_NAME = /(token|secret|password|passwd|auth|session|cookie|csrf|xsrf|api.?key|signature|credential|jwt|bearer|access.?key|client.?key)/i;
 const API_PATH = /(^|\/)(api|graphql|oauth|auth|v\d+|rest|rpc|accounts|users)(\/|$)/i;
+const PAGE_FLOAT_CSS = "#server-trace-float-host{position:fixed!important;inset:0!important;z-index:2147483647!important;pointer-events:none!important;isolation:isolate!important}\n#server-trace-float-host .stx-window{position:fixed!important;left:24px;top:24px;width:280px;max-width:calc(100vw - 24px)!important;max-height:calc(100vh - 24px)!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;pointer-events:auto!important;background:#1b1e23!important;color:#e9edf4!important;border:1px solid #647084!important;border-radius:0!important;box-shadow:0 12px 38px rgba(0,0,0,.45)!important;font:12px/1.5 \"Segoe UI\",Arial,sans-serif!important;letter-spacing:normal!important;text-transform:none!important}\n#server-trace-float-host .stx-titlebar{display:flex!important;align-items:center!important;gap:8px!important;min-height:36px!important;padding:7px 8px!important;background:#2d3440!important;color:#f3f5f9!important;border:0!important;border-bottom:1px solid #48515f!important;border-radius:0!important;cursor:move!important;user-select:none!important;touch-action:none!important}\n#server-trace-float-host .stx-title{flex:1!important;min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:nowrap!important;font-size:12px!important;font-weight:700!important;margin:0!important;padding:0!important;background:transparent!important;color:inherit!important}\n#server-trace-float-host .stx-close{display:grid!important;place-items:center!important;width:24px!important;height:23px!important;padding:0!important;margin:0!important;border:1px solid #626d7d!important;border-radius:0!important;background:#242a33!important;color:#fff!important;font:16px/1 \"Segoe UI\",Arial,sans-serif!important;cursor:pointer!important;box-shadow:none!important}\n#server-trace-float-host .stx-body{padding:12px!important;margin:0!important;color:#dce2ec!important;background:#1b1e23!important;font:12px/1.6 Consolas,\"Courier New\",monospace!important;white-space:pre-wrap!important;overflow-wrap:anywhere!important;word-break:break-word!important;overflow:auto!important;max-height:calc(100vh - 90px)!important;letter-spacing:normal!important;text-align:left!important;text-transform:none!important}\n@media(prefers-color-scheme:light){#server-trace-float-host .stx-window{background:#fff!important;color:#252a32!important;border-color:#b8c0cc!important;box-shadow:0 12px 32px rgba(0,0,0,.2)!important}#server-trace-float-host .stx-titlebar{background:#e2e7ef!important;color:#252a32!important;border-bottom-color:#cbd1dc!important}#server-trace-float-host .stx-close{background:#f6f7fa!important;color:#252a32!important;border-color:#c4cad4!important}#server-trace-float-host .stx-body{background:#fff!important;color:#252a32!important}}";
 
 function setStatus(message, kind = "") {
   const el = $("#status");
@@ -366,67 +367,112 @@ function sendConsoleCode(code, source = "command", alreadyLogged = false) {
   }, "*");
 }
 
-function hideRuntimeFloat() {
-  const layer = $("#runtimeFloatLayer");
-  layer.replaceChildren();
-  layer.classList.add("hidden");
+async function hideRuntimeFloat() {
+  const target = state.targetTabInfo;
+  const tabId = target?.tab?.id || state.currentTabId;
+  if (typeof tabId !== "number") {
+    consoleOutput("No target website tab. Open the website and reopen Server Trace.", "error");
+    return;
+  }
+  try {
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: () => document.getElementById("server-trace-float-host")?.remove()
+    });
+    consoleOutput("Float window closed on the website.", "muted");
+  } catch (error) {
+    consoleOutput("Could not close page float: " + String(error?.message || error), "error");
+  }
 }
 
-function showRuntimeFloat(options) {
-  const layer = $("#runtimeFloatLayer");
-  layer.replaceChildren();
-  layer.classList.remove("hidden");
+async function showRuntimeFloat(options) {
+  const target = state.targetTabInfo;
+  const tabId = target?.tab?.id || state.currentTabId;
+  if (typeof tabId !== "number" || !target?.originPattern) {
+    consoleOutput("No target website tab. Select the website, then reopen Server Trace.", "error");
+    setStatus("Open a regular website and allow access to that site before showing a page float.", "error");
+    return;
+  }
 
-  const panel = document.createElement("section");
-  panel.className = "runtime-float-window";
-  const numericWidth = Number(options.width);
-  const width = Number.isFinite(numericWidth) ? Math.max(180, Math.min(360, numericWidth)) : 260;
-  panel.style.width = "min(" + width + "px, calc(100% - 24px))";
+  try {
+    const granted = await chrome.permissions.contains({ origins: [target.originPattern] });
+    if (!granted) {
+      consoleOutput("Website permission is missing. Click ALLOW SITE, then run float.show(...) again.", "error");
+      setStatus("Click ALLOW SITE before showing a float on this website.", "warn");
+      return;
+    }
 
-  const bar = document.createElement("div");
-  bar.className = "runtime-float-titlebar";
-  const title = document.createElement("div");
-  title.className = "runtime-float-title";
-  title.textContent = typeof options.title === "string" && options.title.trim() ? options.title.slice(0, 100) : "Floating window";
-  const close = document.createElement("button");
-  close.className = "runtime-float-close";
-  close.type = "button";
-  close.textContent = "×";
-  close.title = "Close floating window";
-  close.addEventListener("click", hideRuntimeFloat);
-  bar.append(title, close);
+    await chrome.scripting.insertCSS({ target: { tabId }, css: PAGE_FLOAT_CSS });
+    await chrome.scripting.executeScript({
+      target: { tabId },
+      func: (options) => {
+        const oldHost = document.getElementById("server-trace-float-host");
+        oldHost?.remove();
 
-  const content = document.createElement("div");
-  content.className = "runtime-float-content";
-  content.textContent = typeof options.text === "string" ? options.text.slice(0, 5000) : "";
+        const safeTitle = typeof options?.title === "string" && options.title.trim()
+          ? options.title.slice(0, 100)
+          : "Floating window";
+        const safeText = typeof options?.text === "string" ? options.text.slice(0, 5000) : "";
+        const requestedWidth = Number(options?.width);
+        const width = Number.isFinite(requestedWidth) ? Math.max(180, Math.min(520, requestedWidth)) : 280;
+        const host = document.createElement("div");
+        host.id = "server-trace-float-host";
+        host.setAttribute("data-server-trace", "page-float");
 
-  let drag = null;
-  bar.addEventListener("pointerdown", (event) => {
-    if (event.target.closest("button")) return;
-    const rect = panel.getBoundingClientRect();
-    drag = { x: event.clientX, y: event.clientY, left: rect.left, top: rect.top };
-    bar.setPointerCapture(event.pointerId);
-    panel.style.right = "auto";
-    panel.style.bottom = "auto";
-    panel.style.left = rect.left + "px";
-    panel.style.top = rect.top + "px";
-  });
-  bar.addEventListener("pointermove", (event) => {
-    if (!drag) return;
-    const rect = panel.getBoundingClientRect();
-    const maxLeft = Math.max(0, window.innerWidth - rect.width);
-    const maxTop = Math.max(0, window.innerHeight - Math.min(rect.height, 80));
-    const left = Math.min(maxLeft, Math.max(0, drag.left + event.clientX - drag.x));
-    const top = Math.min(maxTop, Math.max(0, drag.top + event.clientY - drag.y));
-    panel.style.left = left + "px";
-    panel.style.top = top + "px";
-  });
-  const release = () => { drag = null; };
-  bar.addEventListener("pointerup", release);
-  bar.addEventListener("pointercancel", release);
+        const panel = document.createElement("section");
+        panel.className = "stx-window";
+        panel.style.setProperty("width", width + "px", "important");
+        panel.setAttribute("role", "dialog");
+        panel.setAttribute("aria-label", safeTitle);
 
-  panel.append(bar, content);
-  layer.append(panel);
+        const bar = document.createElement("div");
+        bar.className = "stx-titlebar";
+        const title = document.createElement("div");
+        title.className = "stx-title";
+        title.textContent = safeTitle;
+        const close = document.createElement("button");
+        close.className = "stx-close";
+        close.type = "button";
+        close.textContent = "×";
+        close.title = "Close floating window";
+        close.setAttribute("aria-label", "Close floating window");
+        close.addEventListener("click", () => host.remove());
+        bar.append(title, close);
+
+        const content = document.createElement("div");
+        content.className = "stx-body";
+        content.textContent = safeText;
+        panel.append(bar, content);
+        host.append(panel);
+        (document.documentElement || document.body).append(host);
+
+        let drag = null;
+        bar.addEventListener("pointerdown", (event) => {
+          if (event.target.closest("button")) return;
+          const rect = panel.getBoundingClientRect();
+          drag = { x: event.clientX, y: event.clientY, left: rect.left, top: rect.top };
+          try { bar.setPointerCapture(event.pointerId); } catch {}
+        });
+        bar.addEventListener("pointermove", (event) => {
+          if (!drag) return;
+          const rect = panel.getBoundingClientRect();
+          const left = Math.max(0, Math.min(window.innerWidth - Math.min(rect.width, 100), drag.left + event.clientX - drag.x));
+          const top = Math.max(0, Math.min(window.innerHeight - Math.min(rect.height, 50), drag.top + event.clientY - drag.y));
+          panel.style.setProperty("left", left + "px", "important");
+          panel.style.setProperty("top", top + "px", "important");
+        });
+        const release = () => { drag = null; };
+        bar.addEventListener("pointerup", release);
+        bar.addEventListener("pointercancel", release);
+      },
+      args: [options || {}]
+    });
+    consoleOutput("Float window displayed on the website.", "result");
+    setStatus("Page float shown on " + target.origin + ".", "good");
+  } catch (error) {
+    consoleOutput("Could not show page float: " + String(error?.message || error), "error");
+    setStatus("Page float failed. Check site permission and reload the extension.", "error");
+  }
 }
 
 function resetConsoleRun() {
