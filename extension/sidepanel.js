@@ -570,3 +570,97 @@ window.addEventListener("message", (event) => {
 });
 
 prepareConsoleSandbox();
+
+
+const UPDATE_SOURCE = "https://raw.githubusercontent.com/FeaturedPr0ject/the-console-helper/main/extension/manifest.json";
+const UPDATE_ZIP = "https://github.com/FeaturedPr0ject/the-console-helper/archive/refs/heads/main.zip";
+let installedVersion = "0.0.0";
+let latestVersion = null;
+let updateAvailable = false;
+let updateCheckInProgress = false;
+
+function parseVersion(version) {
+  return String(version || "").split(".").map((part) => {
+    const digits = part.match(/^\d+/);
+    return digits ? Number(digits[0]) : 0;
+  });
+}
+
+function compareVersions(a, b) {
+  const left = parseVersion(a);
+  const right = parseVersion(b);
+  const length = Math.max(left.length, right.length);
+  for (let i = 0; i < length; i++) {
+    const x = left[i] || 0;
+    const y = right[i] || 0;
+    if (x > y) return 1;
+    if (x < y) return -1;
+  }
+  return 0;
+}
+
+async function checkForUpdates(silent = false) {
+  if (updateCheckInProgress) return;
+  updateCheckInProgress = true;
+  const checkButton = $("#checkUpdateButton");
+  const downloadButton = $("#downloadUpdateButton");
+  checkButton.disabled = true;
+  downloadButton.disabled = true;
+  $("#updateStatus").className = "update-status";
+  $("#updateStatus").textContent = "Checking the GitHub version…";
+
+  try {
+    const localResponse = await fetch(chrome.runtime.getURL("manifest.json"), { cache: "no-store" });
+    if (!localResponse.ok) throw new Error("Could not read the installed extension version.");
+    const localManifest = await localResponse.json();
+    installedVersion = String(localManifest.version || "0.0.0");
+    $("#installedVersion").textContent = installedVersion;
+
+    const remoteUrl = UPDATE_SOURCE + "?check=" + Date.now();
+    const response = await fetch(remoteUrl, {
+      method: "GET",
+      cache: "no-store",
+      headers: { "Accept": "application/json" }
+    });
+    if (!response.ok) throw new Error("GitHub returned HTTP " + response.status + ".");
+    const remoteManifest = await response.json();
+    latestVersion = String(remoteManifest.version || "");
+    if (!/^\d+\.\d+\.\d+/.test(latestVersion)) throw new Error("GitHub returned an invalid version number.");
+
+    $("#latestVersion").textContent = latestVersion;
+    $("#updateCheckedAt").textContent = new Date().toLocaleTimeString();
+
+    const comparison = compareVersions(latestVersion, installedVersion);
+    if (comparison > 0) {
+      updateAvailable = true;
+      $("#updateStatus").classList.add("available");
+      $("#updateStatus").textContent = "A newer version is available: " + latestVersion + ". Download the ZIP, replace the local extension files, and reload it.";
+      downloadButton.disabled = false;
+      if (!silent) setStatus("Server Trace update available: " + latestVersion + ".", "good");
+    } else if (comparison === 0) {
+      updateAvailable = false;
+      $("#updateStatus").textContent = "You're up to date. Version " + installedVersion + " matches GitHub.";
+      if (!silent) setStatus("Server Trace is up to date.", "good");
+    } else {
+      updateAvailable = false;
+      $("#updateStatus").textContent = "The installed version is newer than the version currently on GitHub.";
+      if (!silent) setStatus("Installed version is newer than GitHub main.", "warn");
+    }
+  } catch (error) {
+    $("#latestVersion").textContent = "Unavailable";
+    $("#updateCheckedAt").textContent = new Date().toLocaleTimeString();
+    $("#updateStatus").classList.add("error");
+    $("#updateStatus").textContent = "Could not check GitHub: " + String(error?.message || error) + ". Check your internet connection and try again.";
+    if (!silent) setStatus("Update check failed. See the UPDATE tab.", "error");
+  } finally {
+    checkButton.disabled = false;
+    updateCheckInProgress = false;
+  }
+}
+
+$("#checkUpdateButton").addEventListener("click", () => checkForUpdates(false));
+$("#downloadUpdateButton").addEventListener("click", () => {
+  if (!updateAvailable) return;
+  chrome.tabs.create({ url: UPDATE_ZIP });
+});
+checkForUpdates(true);
