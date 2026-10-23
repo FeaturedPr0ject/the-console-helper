@@ -1,5 +1,7 @@
 # Server Trace — Chrome Extension
 
+Current source version: **1.1.4**.
+
 ![Server Trace sharp-corner logo](extension/icons/icon128.png)
 
 Server Trace is a Chrome Manifest V3 extension that opens as a persistent Side Panel. It does not require DevTools, F12, or pasting a JavaScript snippet into a website.
