@@ -12,7 +12,7 @@ Server Trace is a Chrome Manifest V3 extension that opens as a persistent Side P
 4. Enable **Developer mode**.
 5. Select **Load unpacked** and choose the extracted repository's `extension` folder.
 6. Pin **Server Trace — API Inspector** using Chrome's Extensions menu.
-7. Select the website tab, then click the Server Trace toolbar icon to open the Side Panel and record that tab. Click **SCAN CURRENT TAB** inside the panel. The action-icon click is required to grant Chrome's temporary `activeTab` access; no F12 is needed.
+7. Open the site you want to inspect, open Server Trace, then click **SCAN CURRENT TAB**. Chrome asks for access to only that site's origin. Approve it to scan that site; no F12 is needed.
 
 To update later, download/extract the latest repository ZIP and select **Reload** on the extension card, or load the updated `extension` folder.
 
@@ -31,12 +31,12 @@ The custom square-corner Server Trace icon is included in PNG sizes 16, 32, 48, 
 
 ## Permissions
 
-- `activeTab`: temporary access to the tab that the user selects by clicking the extension toolbar icon.
-- `scripting`: runs the scanner in that selected tab.
+- `tabs`: reads the current tab's URL/title so the panel knows which site you selected.
+- `scripting`: runs the scanner after site access has been granted.
 - `sidePanel`: opens the extension's dedicated panel.
-- `storage`: keeps only the selected tab ID/URL in session memory so the panel can target the correct tab.
+- Optional host access: Chrome asks for permission to the individual site's origin only when you press Scan; it does not receive all-site access by default.
 
-The extension does not request blanket access to all websites in its manifest.
+The extension declares HTTP/HTTPS host patterns as optional permissions, not automatically granted permissions. When you scan, Chrome requests access for the active site's origin only. You can deny that request and still use the sandboxed CONSOLE tab.
 
 ## Limits and privacy
 
