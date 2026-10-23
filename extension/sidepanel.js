@@ -113,9 +113,11 @@ function scanCurrentPage() {
 }
 
 async function activeTab() {
-  const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-  const tab = tabs[0];
-  if (!tab?.id || !tab.url || !/^https?:/i.test(tab.url)) throw new Error("Open a regular HTTP/HTTPS website tab first.");
+  const response = await chrome.runtime.sendMessage({ type: "SERVER_TRACE_GET_TARGET_TAB" });
+  const tab = response?.tab;
+  if (!tab?.id || !tab.url || !/^https?:/i.test(tab.url)) {
+    throw new Error("Click the Server Trace toolbar icon while your website tab is selected. This records the target tab and grants temporary access.");
+  }
   return tab;
 }
 
@@ -227,12 +229,18 @@ document.querySelectorAll("[data-view]").forEach((button) => {
     $("#" + button.dataset.view + "View").classList.remove("hidden");
   });
 });
-chrome.tabs.query({ active: true, lastFocusedWindow: true }).then((tabs) => {
-  const tab = tabs[0];
+chrome.runtime.sendMessage({ type: "SERVER_TRACE_GET_TARGET_TAB" }).then((response) => {
+  const tab = response?.tab;
   if (tab?.url && /^https?:/i.test(tab.url)) {
     $("#pageTitle").textContent = tab.title || "Current tab ready";
     try { $("#pageOrigin").textContent = new URL(tab.url).origin; } catch {}
+  } else {
+    $("#pageTitle").textContent = "Select a website tab";
+    $("#pageOrigin").textContent = "Click the Server Trace toolbar icon on the page to grant temporary access.";
+    setStatus("Waiting for a target tab. Select a regular website and click the extension icon.", "warn");
   }
+}).catch(() => {
+  setStatus("Could not retrieve the selected tab. Reload the extension and try again.", "error");
 });
 
 const consoleRuntime = {
