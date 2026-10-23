@@ -318,36 +318,46 @@ function clearConsoleOutput() {
   consoleRuntime.outputCount = 0;
 }
 
+function requestSandboxReady() {
+  const frame = $("#consoleSandbox");
+  try {
+    frame.contentWindow.postMessage({ serverTracePing: true }, "*");
+  } catch (error) {
+    $("#consoleRunStatus").textContent = "Sandbox connection failed";
+  }
+}
+
 function prepareConsoleSandbox() {
   const frame = $("#consoleSandbox");
   frame.addEventListener("load", () => {
-    consoleRuntime.frameReady = true;
-    $("#consoleRunStatus").textContent = "Sandbox ready";
-    if (consoleRuntime.queuedRun) {
-      const queued = consoleRuntime.queuedRun;
-      consoleRuntime.queuedRun = null;
-      sendConsoleCode(queued.code, queued.source);
-    }
+    consoleRuntime.frameReady = false;
+    $("#consoleRunStatus").textContent = "Connecting to sandbox…";
+    requestSandboxReady();
   });
 }
 
-function sendConsoleCode(code, source = "command") {
+function sendConsoleCode(code, source = "command", alreadyLogged = false) {
   const frame = $("#consoleSandbox");
-  const runId = consoleRuntime.nextRunId++;
-  consoleRuntime.activeRunId = runId;
-  $("#consoleRunStatus").textContent = "Running…";
-  $("#runCommandButton").disabled = true;
-  $("#runFileButton").disabled = true;
-  consoleOutput("> " + source, "muted");
   if (!code.trim()) {
     consoleOutput("No JavaScript code to run.", "warn");
     resetConsoleRun();
     return;
   }
+
+  if (!alreadyLogged) consoleOutput("> " + source, "muted");
+  $("#runCommandButton").disabled = true;
+  $("#runFileButton").disabled = true;
+
   if (!consoleRuntime.frameReady) {
-    consoleRuntime.queuedRun = { code, source };
+    consoleRuntime.queuedRun = { code, source, alreadyLogged: true };
+    $("#consoleRunStatus").textContent = "Connecting to sandbox…";
+    requestSandboxReady();
     return;
   }
+
+  const runId = consoleRuntime.nextRunId++;
+  consoleRuntime.activeRunId = runId;
+  $("#consoleRunStatus").textContent = "Running…";
   frame.contentWindow.postMessage({
     serverTraceRequest: true,
     runId,
@@ -375,8 +385,9 @@ function resetSandbox() {
   consoleRuntime.activeRunId = null;
   consoleRuntime.queuedRun = null;
   freshFrame.addEventListener("load", () => {
-    consoleRuntime.frameReady = true;
-    $("#consoleRunStatus").textContent = "Sandbox reset";
+    consoleRuntime.frameReady = false;
+    $("#consoleRunStatus").textContent = "Connecting to sandbox…";
+    requestSandboxReady();
   });
   freshFrame.src = "sandbox.html";
   $("#runCommandButton").disabled = false;
@@ -425,7 +436,7 @@ window.addEventListener("message", (event) => {
     if (consoleRuntime.queuedRun) {
       const queued = consoleRuntime.queuedRun;
       consoleRuntime.queuedRun = null;
-      sendConsoleCode(queued.code, queued.source);
+      sendConsoleCode(queued.code, queued.source, queued.alreadyLogged === true);
     }
     return;
   }
