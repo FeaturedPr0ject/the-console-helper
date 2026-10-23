@@ -1,5 +1,5 @@
 const $ = (selector) => document.querySelector(selector);
-const state = { report: null, endpoints: [], currentTabId: null };
+const state = { report: null, endpoints: [], currentTabId: null, targetTabInfo: null };
 const SENSITIVE_NAME = /(token|secret|password|passwd|auth|session|cookie|csrf|xsrf|api.?key|signature|credential|jwt|bearer|access.?key|client.?key)/i;
 const API_PATH = /(^|\/)(api|graphql|oauth|auth|v\d+|rest|rpc|accounts|users)(\/|$)/i;
 
@@ -112,58 +112,62 @@ function scanCurrentPage() {
   };
 }
 
-async function getActiveHttpTab() {
-  const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
-  const tab = tabs[0];
-  if (!tab?.id || !tab.url || !/^https?:/i.test(tab.url)) {
-    throw new Error("Select a normal HTTP/HTTPS website tab, then open Server Trace.");
-  }
-  const pageUrl = new URL(tab.url);
-  const originPattern = pageUrl.protocol + "//" + pageUrl.hostname + "/*";
-  return { tab, originPattern, origin: pageUrl.origin };
-}
-
 async function executeScan(tab) {
-  state.currentTabId = tab.id;
-  setStatus("Scanning loaded page data…");
-  const result = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: scanCurrentPage });
-  const report = result?.[0]?.result;
-  if (!report) throw new Error("The page did not return scan results. Reload the website and try again.");
-  state.report = report;
-  state.endpoints = report.endpoints;
-  renderReport();
-  setStatus("Scan complete. Potential exposure matches require manual review.", "good");
-}
-
-function runScan() {
   $("#scanButton").disabled = true;
   $("#exportButton").disabled = true;
   $("#copyAllButton").disabled = true;
-
-  chrome.tabs.query({ active: true, lastFocusedWindow: true }).then((tabs) => {
-    const tab = tabs[0];
-    if (!tab?.id || !tab.url || !/^https?:/i.test(tab.url)) {
-      throw new Error("Select a normal HTTP/HTTPS website tab, then open Server Trace.");
-    }
-    const pageUrl = new URL(tab.url);
-    const originPattern = pageUrl.protocol + "//" + pageUrl.hostname + "/*";
-    const origin = pageUrl.origin;
-
-    if (state.currentTabId !== tab.id) {
-      state.currentTabId = tab.id;
-      $("#pageTitle").textContent = tab.title || "Current tab";
-      $("#pageOrigin").textContent = origin;
-    }
-
-    setStatus("Requesting permission for " + origin + "…");
-    return chrome.permissions.request({ origins: [originPattern] }).then((granted) => {
-      if (!granted) throw new Error("Site access was denied. Allow access to " + origin + " and retry.");
-      return executeScan(tab);
-    });
-  }).catch((error) => {
+  state.currentTabId = tab.id;
+  setStatus("Scanning loaded page data…");
+  try {
+    const result = await chrome.scripting.executeScript({ target: { tabId: tab.id }, func: scanCurrentPage });
+    const report = result?.[0]?.result;
+    if (!report) throw new Error("The page did not return scan results. Reload the website and try again.");
+    state.report = report;
+    state.endpoints = report.endpoints;
+    renderReport();
+    setStatus("Scan complete. Potential exposure matches require manual review.", "good");
+  } catch (error) {
     setStatus(error?.message || "Unable to scan this page.", "error");
-  }).finally(() => {
+  } finally {
     $("#scanButton").disabled = false;
+  }
+}
+
+function runScan() {
+  const target = state.targetTabInfo;
+  if (!target) {
+    setStatus("Select a normal HTTP/HTTPS website tab, then reopen Server Trace.", "error");
+    return;
+  }
+  chrome.permissions.contains({ origins: [target.originPattern] }).then((hasPermission) => {
+    if (!hasPermission) {
+      setStatus("Chrome permission is required. Press ALLOW SITE first.", "warn");
+      return;
+    }
+    return executeScan(target.tab);
+  }).catch((error) => setStatus(error?.message || "Unable to check site access.", "error"));
+}
+
+function allowSiteAccess() {
+  const target = state.targetTabInfo;
+  if (!target) {
+    setStatus("Select a normal HTTP/HTTPS website tab first.", "error");
+    return;
+  }
+  $("#grantSiteButton").disabled = true;
+  setStatus("Requesting access to " + target.origin + "…");
+  const request = chrome.permissions.request({ origins: [target.originPattern] });
+  request.then((granted) => {
+    if (!granted) {
+      setStatus("Access was denied. Endpoint scanning is unavailable until you allow this site.", "warn");
+      return;
+    }
+    setStatus("Site access granted for " + target.origin + ".", "good");
+    return executeScan(target.tab);
+  }).catch((error) => {
+    setStatus(error?.message || "Chrome could not request site access.", "error");
+  }).finally(() => {
+    $("#grantSiteButton").disabled = false;
   });
 }
 
@@ -243,6 +247,7 @@ async function copyAll() {
 }
 
 $("#scanButton").addEventListener("click", runScan);
+$("#grantSiteButton").addEventListener("click", allowSiteAccess);
 $("#exportButton").addEventListener("click", exportReport);
 $("#copyAllButton").addEventListener("click", copyAll);
 $("#filterInput").addEventListener("input", renderEndpoints);
@@ -256,17 +261,30 @@ document.querySelectorAll("[data-view]").forEach((button) => {
 function refreshActiveTabLabel() {
   chrome.tabs.query({ active: true, lastFocusedWindow: true }).then((tabs) => {
     const tab = tabs[0];
-    if (tab?.url && /^https?:/i.test(tab.url)) {
+    if (tab?.id && tab.url && /^https?:/i.test(tab.url)) {
+      const pageUrl = new URL(tab.url);
+      const target = {
+        tab: { id: tab.id, url: tab.url, title: tab.title || "" },
+        origin: pageUrl.origin,
+        originPattern: pageUrl.protocol + "//" + pageUrl.hostname + "/*"
+      };
+      state.targetTabInfo = target;
+      state.currentTabId = tab.id;
       $("#pageTitle").textContent = tab.title || "Current tab ready";
-      try { $("#pageOrigin").textContent = new URL(tab.url).origin; } catch {}
-      if (!state.currentTabId || state.currentTabId !== tab.id) state.currentTabId = tab.id;
-      setStatus("Ready. Press SCAN CURRENT TAB; Chrome will ask for access to this site only.");
+      $("#pageOrigin").textContent = target.origin;
+      $("#scanButton").disabled = false;
+      $("#grantSiteButton").disabled = false;
+      setStatus("Press SCAN CURRENT TAB if site access is already granted, or ALLOW SITE to request access.");
     } else {
+      state.targetTabInfo = null;
       $("#pageTitle").textContent = "Select a website tab";
       $("#pageOrigin").textContent = "Chrome internal pages cannot be scanned.";
+      $("#scanButton").disabled = true;
+      $("#grantSiteButton").disabled = true;
       setStatus("Open a normal HTTP/HTTPS site, such as https://example.com/.", "warn");
     }
   }).catch(() => {
+    state.targetTabInfo = null;
     setStatus("Could not read the current tab. Reload this extension.", "error");
   });
 }
