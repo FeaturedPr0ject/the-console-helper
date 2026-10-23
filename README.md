@@ -10,7 +10,7 @@ Server Trace is a Chrome Manifest V3 extension that opens as a persistent Side P
 4. Enable **Developer mode**.
 5. Select **Load unpacked** and choose the extracted repository's `extension` folder.
 6. Pin **Server Trace — API Inspector** using Chrome's Extensions menu.
-7. Open the website you are authorized to inspect and click the Server Trace toolbar icon. The tool opens in Chrome's Side Panel; no F12 is needed.
+7. Select the website tab, then click the Server Trace toolbar icon to open the Side Panel and record that tab. Click **SCAN CURRENT TAB** inside the panel. The action-icon click is required to grant Chrome's temporary `activeTab` access; no F12 is needed.
 
 To update later, download/extract the latest repository ZIP and select **Reload** on the extension card, or load the updated `extension` folder.
 
@@ -25,9 +25,10 @@ To update later, download/extract the latest repository ZIP and select **Reload*
 
 ## Permissions
 
-- `activeTab`: allows a scan of the tab after you invoke the extension.
-- `scripting`: runs the scanner in the selected tab.
-- `sidePanel`: opens the extension's dedicated panel when the toolbar icon is clicked.
+- `activeTab`: temporary access to the tab that the user selects by clicking the extension toolbar icon.
+- `scripting`: runs the scanner in that selected tab.
+- `sidePanel`: opens the extension's dedicated panel.
+- `storage`: keeps only the selected tab ID/URL in session memory so the panel can target the correct tab.
 
 The extension does not request blanket access to all websites in its manifest.
 
