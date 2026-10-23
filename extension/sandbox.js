@@ -45,7 +45,12 @@
   const persistentState = Object.create(null);
 
   window.addEventListener("message", async (event) => {
-    if (event.source !== parent || !event.data || event.data.serverTraceRequest !== true) return;
+    if (event.source !== parent || !event.data) return;
+    if (event.data.serverTracePing === true) {
+      send({ type: "READY" });
+      return;
+    }
+    if (event.data.serverTraceRequest !== true) return;
     const { runId, code, report } = event.data;
     if (typeof code !== "string" || code.length > 500000) {
       send({ type: "ERROR", runId, message: "Command is empty or exceeds the 500 KB safety limit." });
