@@ -1,5 +1,7 @@
 # Server Trace — Chrome Extension
 
+![Server Trace sharp-corner logo](extension/icons/icon128.png)
+
 Server Trace is a Chrome Manifest V3 extension that opens as a persistent Side Panel. It does not require DevTools, F12, or pasting a JavaScript snippet into a website.
 
 ## Install in Chrome
@@ -13,6 +15,10 @@ Server Trace is a Chrome Manifest V3 extension that opens as a persistent Side P
 7. Select the website tab, then click the Server Trace toolbar icon to open the Side Panel and record that tab. Click **SCAN CURRENT TAB** inside the panel. The action-icon click is required to grant Chrome's temporary `activeTab` access; no F12 is needed.
 
 To update later, download/extract the latest repository ZIP and select **Reload** on the extension card, or load the updated `extension` folder.
+
+## Extension logo
+
+The custom square-corner Server Trace icon is included in PNG sizes 16, 32, 48, and 128 pixels, and the editable SVG source is at `extension/icons/server-trace-logo.svg`. The icon is configured for both the Chrome toolbar and the Extensions page.
 
 ## Features
 
