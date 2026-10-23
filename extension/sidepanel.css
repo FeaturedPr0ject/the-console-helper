@@ -38,3 +38,12 @@ main{padding:11px}.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1f
 
 .console-notice { padding: 7px 9px; margin-bottom: 7px; }
 .console-notice p { margin-top: 3px; }
+
+.runtime-float-layer{position:fixed;inset:0;z-index:30;pointer-events:none}
+.runtime-float-window{position:absolute;right:12px;bottom:48px;width:min(280px,calc(100% - 24px));max-width:calc(100% - 24px);background:var(--panel);color:var(--text);border:1px solid #687486;box-shadow:0 10px 34px #0008;pointer-events:auto}
+.runtime-float-titlebar{display:flex;align-items:center;gap:8px;min-height:34px;padding:6px 7px;background:#303742;border-bottom:1px solid var(--border);cursor:move;user-select:none;touch-action:none}
+.runtime-float-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:700}
+.runtime-float-close{width:24px;height:22px;padding:0;border:1px solid #5d6674;background:#242830;color:var(--text);font-size:15px;line-height:1}
+.runtime-float-content{padding:10px;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-height:260px;overflow:auto;font:11px/1.6 Consolas,"Courier New",monospace}
+.runtime-float-layer.hidden{display:none!important}
+@media(prefers-color-scheme:light){.runtime-float-window{box-shadow:0 10px 28px #0002}.runtime-float-titlebar{background:#e1e5eb}.runtime-float-close{background:#f5f6f8;color:#252a32}}
