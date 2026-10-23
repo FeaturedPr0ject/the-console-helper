@@ -48,14 +48,14 @@
       <div id="exposureList" class="result-list"><div class="empty">No scan results yet.</div></div>
     </section>
     <section id="consoleView" class="view hidden">
-      <div class="notice console-notice"><strong>Isolated JavaScript console</strong><p>Run JavaScript commands or choose a .js file. Code runs in a separate sandbox and cannot access the active website's DOM, cookies, login session, or private page JavaScript. Network requests are blocked.</p><p>Available data: <code>pageInfo</code>, <code>endpoints</code>, <code>findEndpoints("query")</code>, <code>state</code>, and <code>float.show({title, text})</code>.</p></div>
+      <div class="notice console-notice"><strong>Isolated JavaScript console</strong><p>Run JavaScript commands or choose a .js file. Code runs in a separate sandbox and cannot access the active website's DOM, cookies, login session, or private page JavaScript. Network requests are blocked.</p><p>Available data: <code>pageInfo</code>, <code>endpoints</code>, <code>findEndpoints("query")</code>, <code>state</code>, and <code>float.show({title, text, width})</code>. Float windows appear on the selected website after granting access.</p></div>
       <div class="console-toolbar">
         <button id="runCommandButton" class="button primary">RUN · Ctrl+Enter</button>
         <button id="runFileButton" class="button">RUN FILE</button>
         <button id="clearConsoleButton" class="button">CLEAR</button>
         <input id="consoleFileInput" class="hidden" type="file" accept=".js,.txt,text/javascript,application/javascript">
       </div>
-      <textarea id="consoleInput" class="console-input" spellcheck="false" aria-label="JavaScript command input" placeholder='console.log("Hello, Server Trace");'>float.show({ title: "Float Demo", text: "Hello! Drag this window around the Server Trace panel.", width: 260 });
+      <textarea id="consoleInput" class="console-input" spellcheck="false" aria-label="JavaScript command input" placeholder='console.log("Hello, Server Trace");'>float.show({ title: "Float Demo", text: "Hello! Drag this floating window around the webpage.", width: 280 });
 console.log("Float window created");</textarea>
       <div class="console-output-head"><span>OUTPUT</span><span id="consoleRunStatus">Sandbox ready</span></div>
       <div id="consoleOutput" class="console-output" role="log" aria-live="polite"><div class="console-line muted-line">JavaScript commands run in an isolated sandbox. Use console.log(...) to display results.</div></div>
@@ -71,7 +71,7 @@ console.log("Float window created");</textarea>
     </section>
   </main>
   <div id="runtimeFloatLayer" class="runtime-float-layer hidden" aria-live="polite"></div>
-  <footer class="footer"><span id="scanTime">Not scanned</span><span>SERVER TRACE 1.1.5</span></footer>
+  <footer class="footer"><span id="scanTime">Not scanned</span><span>SERVER TRACE 1.2.0</span></footer>
   <script src="sidepanel.js"></script>
 </body>
 </html>
