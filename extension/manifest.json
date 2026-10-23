@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Server Trace — API Inspector",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "A Chrome side panel with an isolated JavaScript console, local JS runner, and API endpoint inspector.",
   "permissions": [
     "activeTab",
     "scripting",
-    "sidePanel"
+    "sidePanel",
+    "storage"
   ],
   "background": {
     "service_worker": "service-worker.js"
