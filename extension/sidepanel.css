@@ -31,3 +31,7 @@ main{padding:11px}.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1f
   .console-line.warn-line { color:#805718; }
   .console-line.result-line { color:#277445; }
 }
+
+.actions { flex-wrap: wrap; }
+.actions .button { font-size: 10px; padding: 6px 7px; }
+.actions .button.primary { min-width: 125px; }
