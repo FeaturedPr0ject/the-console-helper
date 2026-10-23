@@ -27,7 +27,7 @@ The custom square-corner Server Trace icon is included in PNG sizes 16, 32, 48, 
 - Inspect resource URLs already recorded by the current page and API-like references in its DOM and inline scripts.
 - Filter discovered endpoint candidates and copy sanitized URLs.
 - Export a sanitized JSON report.
-- A **CONSOLE** tab for JavaScript commands and running local `.js` files in an isolated sandbox. Use `Ctrl+Enter` to run the current command. The console exposes sanitized `pageInfo`, `endpoints`, `findEndpoints(query)`, and persistent `state` helpers.
+- A **CONSOLE** tab for JavaScript commands and running local `.js` files in an isolated sandbox. Use `Ctrl+Enter` to run the current command. The console exposes sanitized `pageInfo`, `endpoints`, `findEndpoints(query)`, and persistent `state` helpers and a safe `float.show({ title, text, width })` demo window inside the Side Panel.
 - Check inline page code for common secret-shaped patterns. The extension reports only the pattern category/source and never displays or exports matched values.
 - Dark/light styling follows the browser's system color preference.
 
