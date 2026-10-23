@@ -21,7 +21,7 @@
       <button id="scanButton" class="button primary">SCAN CURRENT TAB</button>
       <button id="exportButton" class="button" disabled>EXPORT JSON</button>
     </div>
-    <div id="status" class="status" role="status">Ready. The scanner does not send requests to servers.</div>
+    <div id="status" class="status" role="status">Ready. The scanner asks for permission only for the website you choose.</div>
   </header>
   <main>
     <section class="stats">
@@ -62,7 +62,7 @@ console.table(endpoints);</textarea>
       <iframe id="consoleSandbox" class="sandbox-frame" src="sandbox.html" title="Isolated JavaScript runner"></iframe>
     </section>
     <section id="aboutView" class="view hidden">
-      <div class="notice"><strong>Local, passive scan</strong><p>Inspects resource URLs already recorded by the browser, API-like references in the page, and inline script text.</p><p>Does not read cookies, authorization headers, login sessions, or storage values. Does not send requests to discovered endpoints or extract tokens.</p></div>
+      <div class="notice"><strong>Local, passive scan</strong><p>Requests access only to the specific website when you press Scan. You can deny permission and keep using the isolated JavaScript console.</p><p>Inspects resource URLs already recorded by the browser, API-like references in the page, and inline script text.</p><p>Does not read cookies, authorization headers, login sessions, or storage values. Does not send requests to discovered endpoints or extract tokens.</p></div>
       <div class="about-row"><span>Extension</span><strong>Manifest V3</strong></div>
       <div class="about-row"><span>Interface</span><strong>Chrome Side Panel</strong></div>
       <div class="about-row"><span>Data collection</span><strong>None</strong></div>
