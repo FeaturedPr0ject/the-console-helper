@@ -1,6 +1,6 @@
 # Server Trace — Chrome Extension
 
-Current source version: **1.1.5**.
+Current source version: **1.2.0**.
 
 ![Server Trace sharp-corner logo](extension/icons/icon128.png)
 
