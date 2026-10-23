@@ -34,6 +34,7 @@
       <button class="tab active" data-view="endpoints">API ENDPOINTS</button>
       <button class="tab" data-view="exposures">EXPOSURE CHECKS</button>
       <button class="tab" data-view="console">CONSOLE</button>
+      <button class="tab" data-view="update">UPDATE</button>
       <button class="tab" data-view="about">ABOUT</button>
     </nav>
     <section id="endpointsView" class="view">
@@ -61,6 +62,22 @@ console.log("Float window created");</textarea>
       <div id="consoleOutput" class="console-output" role="log" aria-live="polite"><div class="console-line muted-line">JavaScript commands run in an isolated sandbox. Use console.log(...) to display results.</div></div>
       <iframe id="consoleSandbox" class="sandbox-frame" src="sandbox.html" title="Isolated JavaScript runner"></iframe>
     </section>
+    <section id="updateView" class="view hidden">
+      <div class="notice update-intro"><strong>Automatic update check</strong><p>Server Trace checks the latest version published in this GitHub repository when the panel opens and whenever you press Check now.</p></div>
+      <div class="update-card">
+        <div class="update-row"><span>INSTALLED VERSION</span><strong id="installedVersion">Loading…</strong></div>
+        <div class="update-row"><span>LATEST GITHUB VERSION</span><strong id="latestVersion">Checking…</strong></div>
+        <div id="updateStatus" class="update-status" role="status">Checking GitHub for updates…</div>
+        <div class="update-actions">
+          <button id="checkUpdateButton" class="button primary">CHECK NOW</button>
+          <button id="downloadUpdateButton" class="button" disabled>DOWNLOAD UPDATE ZIP</button>
+        </div>
+      </div>
+      <div class="notice warning update-limit"><strong>Important</strong><p>Because this is a manually loaded extension, Chrome will not let it replace its own installed files. If a newer version is found, download the ZIP, replace your local extension folder, then press Reload on <code>chrome://extensions</code>. Extensions published through the Chrome Web Store can update automatically.</p></div>
+      <div class="about-row"><span>Update source</span><strong>GitHub main branch</strong></div>
+      <div class="about-row"><span>Last check</span><strong id="updateCheckedAt">Not checked</strong></div>
+      <p class="update-link"><a href="https://github.com/FeaturedPr0ject/the-console-helper" target="_blank" rel="noreferrer">Open repository on GitHub</a></p>
+    </section>
     <section id="aboutView" class="view hidden">
       <div class="notice"><strong>Local, passive scan</strong><p>Requests access only to the specific website when you press Scan. You can deny permission and keep using the isolated JavaScript console.</p><p>Inspects resource URLs already recorded by the browser, API-like references in the page, and inline script text.</p><p>Does not read cookies, authorization headers, login sessions, or storage values. Does not send requests to discovered endpoints or extract tokens.</p></div>
       <div class="about-row"><span>Extension</span><strong>Manifest V3</strong></div>
@@ -71,7 +88,7 @@ console.log("Float window created");</textarea>
     </section>
   </main>
   <div id="runtimeFloatLayer" class="runtime-float-layer hidden" aria-live="polite"></div>
-  <footer class="footer"><span id="scanTime">Not scanned</span><span>SERVER TRACE 1.2.1</span></footer>
+  <footer class="footer"><span id="scanTime">Not scanned</span><span>SERVER TRACE 1.3.0</span></footer>
   <script src="sidepanel.js"></script>
 </body>
 </html>
