@@ -1,6 +1,6 @@
 # Server Trace — Chrome Extension
 
-Current source version: **1.2.1**.
+Current source version: **1.3.0**.
 
 ![Server Trace sharp-corner logo](extension/icons/icon128.png)
 
@@ -16,7 +16,7 @@ Server Trace is a Chrome Manifest V3 extension that opens as a persistent Side P
 6. Pin **Server Trace — API Inspector** using Chrome's Extensions menu.
 7. Open the site you want to inspect, then open Server Trace. Click **ALLOW SITE** to show Chrome's permission prompt for that website only. After granting access, the extension scans it automatically. You can use **SCAN CURRENT TAB** later without another prompt while access remains granted; no F12 is needed.
 
-To update later, download/extract the latest repository ZIP and select **Reload** on the extension card, or load the updated `extension` folder.
+Open the **UPDATE** tab in Server Trace to automatically check the GitHub version on panel launch or press **CHECK NOW**. If a new version is found, choose **DOWNLOAD UPDATE ZIP**, extract it, point **Load unpacked** to the updated `extension` folder, or replace the existing files and click **Reload**. The UPDATE tab cannot replace the installed files itself because Chrome restricts self-modification of unpacked extensions.
 
 ## Extension logo
 
@@ -29,12 +29,14 @@ The custom square-corner Server Trace icon is included in PNG sizes 16, 32, 48, 
 - Export a sanitized JSON report.
 - A **CONSOLE** tab for JavaScript commands and running local `.js` files in an isolated sandbox. Use `Ctrl+Enter` to run the current command. The console exposes sanitized `pageInfo`, `endpoints`, `findEndpoints(query)`, persistent `state`, and `float.show({ title, text, width })` to create a draggable, text-only floating window directly on the active webpage. Grant site access with **ALLOW SITE** before using `float.show()`.
 - Check inline page code for common secret-shaped patterns. The extension reports only the pattern category/source and never displays or exports matched values.
+- An **UPDATE** tab checks the current GitHub manifest on panel launch and lets you download the current source ZIP when a newer version is found.
 - Dark/light styling follows the browser's system color preference.
 
 ## Permissions
 
 - `tabs`: reads the current tab's URL/title so the panel knows which site you selected.
-- `scripting`: runs the scanner after site access has been granted.
+- `scripting`: runs the scanner and the explicit float helper after site access has been granted.
+- `host_permissions` for the repository's `raw.githubusercontent.com` manifest: allows the UPDATE tab to check the latest version on GitHub.
 - `sidePanel`: opens the extension's dedicated panel.
 - Optional host access: Chrome asks for permission to the individual site's origin only when you press Scan; it does not receive all-site access by default.
 
