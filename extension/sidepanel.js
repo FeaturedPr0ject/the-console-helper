@@ -366,6 +366,69 @@ function sendConsoleCode(code, source = "command", alreadyLogged = false) {
   }, "*");
 }
 
+function hideRuntimeFloat() {
+  const layer = $("#runtimeFloatLayer");
+  layer.replaceChildren();
+  layer.classList.add("hidden");
+}
+
+function showRuntimeFloat(options) {
+  const layer = $("#runtimeFloatLayer");
+  layer.replaceChildren();
+  layer.classList.remove("hidden");
+
+  const panel = document.createElement("section");
+  panel.className = "runtime-float-window";
+  const numericWidth = Number(options.width);
+  const width = Number.isFinite(numericWidth) ? Math.max(180, Math.min(360, numericWidth)) : 260;
+  panel.style.width = "min(" + width + "px, calc(100% - 24px))";
+
+  const bar = document.createElement("div");
+  bar.className = "runtime-float-titlebar";
+  const title = document.createElement("div");
+  title.className = "runtime-float-title";
+  title.textContent = typeof options.title === "string" && options.title.trim() ? options.title.slice(0, 100) : "Floating window";
+  const close = document.createElement("button");
+  close.className = "runtime-float-close";
+  close.type = "button";
+  close.textContent = "×";
+  close.title = "Close floating window";
+  close.addEventListener("click", hideRuntimeFloat);
+  bar.append(title, close);
+
+  const content = document.createElement("div");
+  content.className = "runtime-float-content";
+  content.textContent = typeof options.text === "string" ? options.text.slice(0, 5000) : "";
+
+  let drag = null;
+  bar.addEventListener("pointerdown", (event) => {
+    if (event.target.closest("button")) return;
+    const rect = panel.getBoundingClientRect();
+    drag = { x: event.clientX, y: event.clientY, left: rect.left, top: rect.top };
+    bar.setPointerCapture(event.pointerId);
+    panel.style.right = "auto";
+    panel.style.bottom = "auto";
+    panel.style.left = rect.left + "px";
+    panel.style.top = rect.top + "px";
+  });
+  bar.addEventListener("pointermove", (event) => {
+    if (!drag) return;
+    const rect = panel.getBoundingClientRect();
+    const maxLeft = Math.max(0, window.innerWidth - rect.width);
+    const maxTop = Math.max(0, window.innerHeight - Math.min(rect.height, 80));
+    const left = Math.min(maxLeft, Math.max(0, drag.left + event.clientX - drag.x));
+    const top = Math.min(maxTop, Math.max(0, drag.top + event.clientY - drag.y));
+    panel.style.left = left + "px";
+    panel.style.top = top + "px";
+  });
+  const release = () => { drag = null; };
+  bar.addEventListener("pointerup", release);
+  bar.addEventListener("pointercancel", release);
+
+  panel.append(bar, content);
+  layer.append(panel);
+}
+
 function resetConsoleRun() {
   consoleRuntime.activeRunId = null;
   $("#runCommandButton").disabled = false;
@@ -438,6 +501,14 @@ window.addEventListener("message", (event) => {
       consoleRuntime.queuedRun = null;
       sendConsoleCode(queued.code, queued.source, queued.alreadyLogged === true);
     }
+    return;
+  }
+  if (message.type === "FLOAT_SHOW") {
+    showRuntimeFloat(message.options || {});
+    return;
+  }
+  if (message.type === "FLOAT_HIDE") {
+    hideRuntimeFloat();
     return;
   }
   if (message.runId !== consoleRuntime.activeRunId) return;
