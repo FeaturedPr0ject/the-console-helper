@@ -79,6 +79,22 @@
         item.host.toLowerCase().includes(term) || item.source.toLowerCase().includes(term));
     };
 
+    const customFloat = Object.freeze({
+      show: (options = {}) => {
+        const safeOptions = options && typeof options === "object" ? options : {};
+        send({
+          type: "FLOAT_SHOW",
+          runId,
+          options: {
+            title: typeof safeOptions.title === "string" ? safeOptions.title.slice(0, 100) : "Floating window",
+            text: typeof safeOptions.text === "string" ? safeOptions.text.slice(0, 5000) : "",
+            width: Number.isFinite(Number(safeOptions.width)) ? Number(safeOptions.width) : 260
+          }
+        });
+      },
+      hide: () => send({ type: "FLOAT_HIDE", runId })
+    });
+
     const customConsole = Object.freeze({
       log: (...args) => send({ type: "LOG", runId, level: "log", values: args.map(serialize) }),
       info: (...args) => send({ type: "LOG", runId, level: "log", values: args.map(serialize) }),
@@ -95,12 +111,12 @@
     send({ type: "START", runId });
     try {
       const run = new AsyncFunction(
-        "console", "pageInfo", "endpoints", "findEndpoints", "state",
+        "console", "pageInfo", "endpoints", "findEndpoints", "state", "float",
         "fetch", "XMLHttpRequest", "WebSocket", "EventSource", "Worker", "SharedWorker",
         '"use strict";\n' + code
       );
       const result = await run(
-        customConsole, pageInfo, endpoints, findEndpoints, persistentState,
+        customConsole, pageInfo, endpoints, findEndpoints, persistentState, customFloat,
         blockedNetwork, disabledApi, disabledApi, disabledApi, disabledApi, disabledApi
       );
       if (result !== undefined) send({ type: "RESULT", runId, value: serialize(result) });
