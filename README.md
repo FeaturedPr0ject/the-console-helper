@@ -28,6 +28,20 @@ Open the **UPDATE** tab in Server Trace to automatically check the GitHub versio
 
 **Important:** Page mode is equivalent to running code on the live website. It can read or modify page state, interact with the DOM, and use page APIs. Run only code you understand and trust. The commands you type are not automatically echoed into DevTools as though you typed them there; the code executes in the page context, so its normal Console output appears there.
 
+## Windows CMD Commands setup
+
+Chrome extensions cannot start `cmd.exe` directly. The **COMMANDS** sub-tab uses Chrome Native Messaging to talk to a companion Windows host, which starts `cmd.exe /c` for each command. This is the supported bridge between a browser extension and a local application ([Chrome Native Messaging documentation](https://developer.chrome.com/docs/extensions/develop/concepts/native-messaging)).
+
+1. Open the [Actions page](https://github.com/FeaturedPr0ject/the-console-helper/actions) and select the latest successful **Build Native CMD Host** run.
+2. Download the `ServerTrace-NativeHost-win-x64` artifact and extract `ServerTrace.NativeHost.exe`.
+3. Copy the EXE beside `install-native-host.bat` in the `native-host` folder from the source ZIP.
+4. Open `chrome://extensions`, copy the ID shown on the Server Trace card, and run `install-native-host.bat`. Paste the extension ID when prompted.
+5. Reload the extension, open **CONSOLE → COMMANDS**, tick the confirmation checkbox, and press **CONNECT CMD.EXE**.
+
+Alternatively, install the .NET 8 SDK and run `build-native-host.bat` inside the `native-host` folder to build the host locally. Use `uninstall-native-host.bat` to remove the native host registration.
+
+The Native Messaging Host executes commands under the current Windows account. Commands can alter the computer, so only run commands you understand. The extension sends commands only after you type them and click Run. The host limits command length, runtime, and captured output; the current directory persists during one connection, while other `cmd.exe` session state (such as environment variable changes) does not.
+
 ## Extension logo
 
 The custom square-corner Server Trace icon is included in PNG sizes 16, 32, 48, and 128 pixels, and the editable SVG source is at `extension/icons/server-trace-logo.svg`. The icon is configured for both the Chrome toolbar and the Extensions page.
