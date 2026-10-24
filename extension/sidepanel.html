@@ -49,15 +49,18 @@
       <div id="exposureList" class="result-list"><div class="empty">No scan results yet.</div></div>
     </section>
     <section id="consoleView" class="view hidden">
-      <div class="notice console-notice"><strong>Isolated JavaScript console</strong><p>Run JavaScript commands or choose a .js file. Code runs in a separate sandbox and cannot access the active website's DOM, cookies, login session, or private page JavaScript. Network requests are blocked.</p><p>Available data: <code>pageInfo</code>, <code>endpoints</code>, <code>findEndpoints("query")</code>, <code>state</code>, and <code>float.show({title, text, width})</code>. Float windows appear on the selected website after granting access.</p></div>
+      <div class="notice console-notice"><strong>JavaScript Console</strong><p><b>RUN SANDBOX</b> executes in isolation. <b>RUN ON PAGE · F12</b> executes in the website’s main JavaScript context, so native <code>console.log()</code> appears in that tab’s DevTools Console and commands can read or change the live page.</p><p>Page mode requires Chrome’s <b>Allow User Scripts</b> switch and permission for the current site. Run only code you trust.</p><p>Sandbox helpers: <code>pageInfo</code>, <code>endpoints</code>, <code>findEndpoints("query")</code>, <code>state</code>, <code>float.show({title, text, width})</code>.</p></div>
       <div class="console-toolbar">
-        <button id="runCommandButton" class="button primary">RUN · Ctrl+Enter</button>
+        <button id="runCommandButton" class="button primary">RUN SANDBOX · Ctrl+Enter</button>
+        <button id="runPageButton" class="button page-run">RUN ON PAGE · F12</button>
         <button id="runFileButton" class="button">RUN FILE</button>
+        <button id="runFilePageButton" class="button page-run">RUN FILE ON PAGE</button>
         <button id="clearConsoleButton" class="button">CLEAR</button>
-        <input id="consoleFileInput" class="hidden" type="file" accept=".js,.txt,text/javascript,application/javascript">
+        <input id="consoleFileInput" class="hidden" type="file" accept=".js,.mjs,.cjs,.txt,text/javascript,application/javascript">
       </div>
-      <textarea id="consoleInput" class="console-input" spellcheck="false" aria-label="JavaScript command input" placeholder='console.log("Hello, Server Trace");'>float.show({ title: "Float Demo", text: "Hello! Drag this floating window around the webpage.", width: 280 });
-console.log("Float window created");</textarea>
+      <textarea id="consoleInput" class="console-input" spellcheck="false" aria-label="JavaScript command input" placeholder='console.log("Hello, Server Trace");'>console.log("Hello from Server Trace");
+document.title = "Page Console test";
+console.log("Current title:", document.title);</textarea>
       <div class="console-output-head"><span>OUTPUT</span><span id="consoleRunStatus">Sandbox ready</span></div>
       <div id="consoleOutput" class="console-output" role="log" aria-live="polite"><div class="console-line muted-line">JavaScript commands run in an isolated sandbox. Use console.log(...) to display results.</div></div>
       <iframe id="consoleSandbox" class="sandbox-frame" src="sandbox.html" title="Isolated JavaScript runner"></iframe>
@@ -88,7 +91,7 @@ console.log("Float window created");</textarea>
     </section>
   </main>
   <div id="runtimeFloatLayer" class="runtime-float-layer hidden" aria-live="polite"></div>
-  <footer class="footer"><span id="scanTime">Not scanned</span><span>SERVER TRACE 1.3.0</span></footer>
+  <footer class="footer"><span id="scanTime">Not scanned</span><span>SERVER TRACE 1.4.0</span></footer>
   <script src="sidepanel.js"></script>
 </body>
 </html>
