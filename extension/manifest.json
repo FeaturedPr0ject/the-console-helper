@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Server Trace — API Inspector",
-  "version": "1.3.0",
-  "description": "A Chrome side panel with a JavaScript console, in-page float windows, API inspection, and GitHub update checking.",
+  "version": "1.4.0",
+  "description": "A Chrome side panel with sandboxed and page-context JavaScript consoles, API inspection, in-page floats, and update checking.",
   "permissions": [
     "tabs",
     "scripting",
-    "sidePanel"
+    "sidePanel",
+    "userScripts"
   ],
   "background": {
     "service_worker": "service-worker.js"
@@ -41,5 +42,6 @@
   ],
   "host_permissions": [
     "https://raw.githubusercontent.com/FeaturedPr0ject/the-console-helper/*"
-  ]
+  ],
+  "minimum_chrome_version": "135"
 }
