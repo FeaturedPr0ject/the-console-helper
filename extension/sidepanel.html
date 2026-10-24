@@ -58,9 +58,8 @@
         <button id="clearConsoleButton" class="button">CLEAR</button>
         <input id="consoleFileInput" class="hidden" type="file" accept=".js,.mjs,.cjs,.txt,text/javascript,application/javascript">
       </div>
-      <textarea id="consoleInput" class="console-input" spellcheck="false" aria-label="JavaScript command input" placeholder='console.log("Hello, Server Trace");'>console.log("Hello from Server Trace");
-document.title = "Page Console test";
-console.log("Current title:", document.title);</textarea>
+      <textarea id="consoleInput" class="console-input" spellcheck="false" aria-label="JavaScript command input" placeholder='console.log("Hello, Server Trace");'>float.show({ title: "ConeUI Floating Panel", text: "Hello! This is a draggable floating window on the webpage.\nMove it by the title bar.", width: 300 });
+console.log("Page float created");</textarea>
       <div class="console-output-head"><span>OUTPUT</span><span id="consoleRunStatus">Sandbox ready</span></div>
       <div id="consoleOutput" class="console-output" role="log" aria-live="polite"><div class="console-line muted-line">JavaScript commands run in an isolated sandbox. Use console.log(...) to display results.</div></div>
       <iframe id="consoleSandbox" class="sandbox-frame" src="sandbox.html" title="Isolated JavaScript runner"></iframe>
