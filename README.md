@@ -1,6 +1,6 @@
 # Server Trace — Chrome Extension
 
-Current source version: **1.3.0**.
+Current source version: **1.4.0**.
 
 ![Server Trace sharp-corner logo](extension/icons/icon128.png)
 
@@ -27,7 +27,7 @@ The custom square-corner Server Trace icon is included in PNG sizes 16, 32, 48, 
 - Inspect resource URLs already recorded by the current page and API-like references in its DOM and inline scripts.
 - Filter discovered endpoint candidates and copy sanitized URLs.
 - Export a sanitized JSON report.
-- A **CONSOLE** tab for JavaScript commands and running local `.js` files in an isolated sandbox. Use `Ctrl+Enter` to run the current command. The console exposes sanitized `pageInfo`, `endpoints`, `findEndpoints(query)`, persistent `state`, and `float.show({ title, text, width })` to create a draggable, text-only floating window directly on the active webpage. Grant site access with **ALLOW SITE** before using `float.show()`.
+- A **CONSOLE** tab with two modes: **RUN SANDBOX** for isolated testing and **RUN ON PAGE · F12** for user-entered JavaScript in the selected page's `MAIN` world. Native `console.log()` calls from page mode appear in that tab's DevTools Console. Local `.js` files can be run in either mode. Page mode requires Chrome's **Allow User Scripts** switch and site access. Sandbox mode exposes `pageInfo`, `endpoints`, `findEndpoints(query)`, persistent `state`, and `float.show({ title, text, width })`.
 - Check inline page code for common secret-shaped patterns. The extension reports only the pattern category/source and never displays or exports matched values.
 - An **UPDATE** tab checks the current GitHub manifest on panel launch and lets you download the current source ZIP when a newer version is found.
 - Dark/light styling follows the browser's system color preference.
@@ -35,7 +35,8 @@ The custom square-corner Server Trace icon is included in PNG sizes 16, 32, 48, 
 ## Permissions
 
 - `tabs`: reads the current tab's URL/title so the panel knows which site you selected.
-- `scripting`: runs the scanner and the explicit float helper after site access has been granted.
+- `scripting`: runs the scanner and explicit in-page float helper after site access has been granted.
+- `userScripts`: enables an explicit **RUN ON PAGE** mode for user-entered code in the selected page's JavaScript world. Chrome also requires **Allow User Scripts** to be enabled in the extension's Details settings.
 - `host_permissions` for the repository's `raw.githubusercontent.com` manifest: allows the UPDATE tab to check the latest version on GitHub.
 - `sidePanel`: opens the extension's dedicated panel.
 - Optional host access: Chrome asks for permission to the individual site's origin only when you press Scan; it does not receive all-site access by default.
