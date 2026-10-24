@@ -300,7 +300,9 @@ const consoleRuntime = {
   nextRunId: 1,
   activeRunId: null,
   queuedRun: null,
-  outputCount: 0
+  outputCount: 0,
+  fileExecutionMode: "sandbox",
+  pageRunInProgress: false
 };
 
 function consoleOutput(text, level = "log") {
@@ -479,6 +481,8 @@ function resetConsoleRun() {
   consoleRuntime.activeRunId = null;
   $("#runCommandButton").disabled = false;
   $("#runFileButton").disabled = false;
+  $("#runPageButton").disabled = false;
+  $("#runFilePageButton").disabled = false;
   $("#consoleRunStatus").textContent = "Sandbox ready";
 }
 
@@ -504,7 +508,15 @@ function resetSandbox() {
 }
 
 $("#runCommandButton").addEventListener("click", runConsoleCommand);
-$("#runFileButton").addEventListener("click", () => $("#consoleFileInput").click());
+$("#runPageButton").addEventListener("click", () => runPageContext($("#consoleInput").value, "console command"));
+$("#runFileButton").addEventListener("click", () => {
+  consoleRuntime.fileExecutionMode = "sandbox";
+  $("#consoleFileInput").click();
+});
+$("#runFilePageButton").addEventListener("click", () => {
+  consoleRuntime.fileExecutionMode = "page";
+  $("#consoleFileInput").click();
+});
 $("#clearConsoleButton").addEventListener("click", () => {
   clearConsoleOutput();
   resetSandbox();
@@ -527,7 +539,11 @@ $("#consoleFileInput").addEventListener("change", async (event) => {
   try {
     const source = await file.text();
     $("#consoleInput").value = source;
-    sendConsoleCode(source, "file: " + file.name);
+    if (consoleRuntime.fileExecutionMode === "page") {
+      runPageContext(source, "file: " + file.name);
+    } else {
+      sendConsoleCode(source, "file: " + file.name);
+    }
   } catch (error) {
     consoleOutput("Could not read file: " + (error?.message || error), "error");
   } finally {
@@ -664,3 +680,104 @@ $("#downloadUpdateButton").addEventListener("click", () => {
   chrome.tabs.create({ url: UPDATE_ZIP });
 });
 checkForUpdates(true);
+
+
+function getUserScriptsApi() {
+  try {
+    const api = chrome.userScripts;
+    return api && typeof api.execute === "function" ? api : null;
+  } catch {
+    return null;
+  }
+}
+
+function pageResultText(value) {
+  if (value === undefined) return "undefined";
+  if (typeof value === "string") return value;
+  try {
+    const text = JSON.stringify(value, null, 2);
+    return text === undefined ? String(value) : text;
+  } catch {
+    try { return String(value); } catch { return "[Result could not be serialized]"; }
+  }
+}
+
+function runPageContext(code, source = "console command") {
+  const target = state.targetTabInfo;
+  if (!target?.tab?.id || !target.originPattern) {
+    setStatus("Select a normal HTTP/HTTPS website tab first.", "error");
+    consoleOutput("No active website is selected. Open a site and reopen Server Trace.", "error");
+    return;
+  }
+  if (typeof code !== "string" || !code.trim()) {
+    consoleOutput("No JavaScript code to run.", "warn");
+    return;
+  }
+  if (code.length > 500000) {
+    consoleOutput("Code is larger than the 500 KB safety limit.", "error");
+    return;
+  }
+
+  const userScripts = getUserScriptsApi();
+  if (!userScripts) {
+    const message = "Chrome has not enabled User Scripts for this extension. Open chrome://extensions → Server Trace → Details → enable Allow User Scripts, then reload the extension.";
+    consoleOutput(message, "error");
+    setStatus("Enable Allow User Scripts on the extension Details page, then reload.", "error");
+    return;
+  }
+
+  let permissionRequest;
+  try {
+    permissionRequest = chrome.permissions.request({ origins: [target.originPattern] });
+  } catch (error) {
+    consoleOutput("Could not request site permission: " + String(error?.message || error), "error");
+    setStatus("Site permission request failed.", "error");
+    return;
+  }
+
+  consoleRuntime.pageRunInProgress = true;
+  $("#runPageButton").disabled = true;
+  $("#runFilePageButton").disabled = true;
+  $("#consoleRunStatus").textContent = "Running in page context…";
+  consoleOutput("> " + source + " [PAGE CONTEXT]", "muted");
+  setStatus("Executing JavaScript on " + target.origin + "…");
+
+  Promise.resolve(permissionRequest).then(async (granted) => {
+    if (!granted) throw new Error("Site access was denied. Allow this site and retry.");
+    const sourceCode = 'console.log("%c[Server Trace · Page Console]", "color:#79c7a0;font-weight:bold");\n' +
+      code + "\n//# sourceURL=server-trace-page-console.js";
+    const results = await userScripts.execute({
+      target: { tabId: target.tab.id },
+      js: [{ code: sourceCode }],
+      world: "MAIN",
+      injectImmediately: true
+    });
+    let resultShown = false;
+    for (const result of results || []) {
+      if (result.error) {
+        consoleOutput("Frame " + result.frameId + ": " + String(result.error), "error");
+        resultShown = true;
+      } else if (result.result !== undefined) {
+        consoleOutput("Result: " + pageResultText(result.result), "result");
+        resultShown = true;
+      }
+    }
+    if (!resultShown) {
+      consoleOutput("Executed on the webpage. Native console output is visible in this tab's F12 Console.", "result");
+    }
+    $("#consoleRunStatus").textContent = "Page command complete";
+    setStatus("Executed in the website's MAIN world. Check F12 Console for native console output.", "good");
+  }).catch((error) => {
+    const message = String(error?.message || error);
+    consoleOutput("Page execution failed: " + message, "error");
+    if (/user.?script|permission|not allowed|enable/i.test(message)) {
+      consoleOutput("Check chrome://extensions → Server Trace → Details → Allow User Scripts, and grant access to " + target.origin + ".", "warn");
+    }
+    $("#consoleRunStatus").textContent = "Page command failed";
+    setStatus("Page-context execution failed. See Output for details.", "error");
+  }).finally(() => {
+    consoleRuntime.pageRunInProgress = false;
+    $("#runPageButton").disabled = false;
+    $("#runFilePageButton").disabled = false;
+  });
+}
