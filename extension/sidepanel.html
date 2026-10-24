@@ -49,20 +49,56 @@
       <div id="exposureList" class="result-list"><div class="empty">No scan results yet.</div></div>
     </section>
     <section id="consoleView" class="view hidden">
-      <div class="notice console-notice"><strong>JavaScript Console</strong><p><b>RUN SANDBOX</b> executes in isolation. <b>RUN ON PAGE · F12</b> executes in the website’s main JavaScript context, so native <code>console.log()</code> appears in that tab’s DevTools Console and commands can read or change the live page.</p><p>Page mode requires <b>chrome://extensions → Server Trace → Details → Allow User Scripts</b> plus permission for the current site. Run only code you trust.</p><p>Sandbox helpers: <code>pageInfo</code>, <code>endpoints</code>, <code>findEndpoints("query")</code>, <code>state</code>, <code>float.show({title, text, width})</code>.</p></div>
-      <div class="console-toolbar">
-        <button id="runCommandButton" class="button primary">RUN SANDBOX · Ctrl+Enter</button>
-        <button id="runPageButton" class="button page-run">RUN ON PAGE · F12</button>
-        <button id="runFileButton" class="button">RUN FILE</button>
-        <button id="runFilePageButton" class="button page-run">RUN FILE ON PAGE</button>
-        <button id="clearConsoleButton" class="button">CLEAR</button>
-        <input id="consoleFileInput" class="hidden" type="file" accept=".js,.mjs,.cjs,.txt,text/javascript,application/javascript">
+      <div class="notice console-notice"><strong>Console tools</strong><p><b>Console</b> runs JavaScript in the sandbox or the selected webpage. <b>Commands</b> connects to the Windows <code>cmd.exe</code> shell through an optional Native Messaging Host installed on this PC.</p></div>
+      <nav class="console-modes" aria-label="Console mode">
+        <button class="console-mode-tab active" data-console-mode="javascript">CONSOLE</button>
+        <button class="console-mode-tab" data-console-mode="commands">COMMANDS</button>
+      </nav>
+      <div id="javascriptMode" class="console-mode">
+        <div class="console-toolbar">
+          <button id="runCommandButton" class="button primary">RUN SANDBOX · Ctrl+Enter</button>
+          <button id="runPageButton" class="button page-run">RUN ON PAGE · F12</button>
+          <button id="runFileButton" class="button">RUN FILE</button>
+          <button id="runFilePageButton" class="button page-run">RUN FILE ON PAGE</button>
+          <button id="clearConsoleButton" class="button">CLEAR</button>
+          <input id="consoleFileInput" class="hidden" type="file" accept=".js,.mjs,.cjs,.txt,text/javascript,application/javascript">
+        </div>
+        <textarea id="consoleInput" class="console-input" spellcheck="false" aria-label="JavaScript command input" placeholder='console.log("Hello from Server Trace");'>console.log("Hello from Server Trace");
+document.title = "Page Console test";
+console.log("Current title:", document.title);</textarea>
+        <div class="console-output-head"><span>OUTPUT</span><span id="consoleRunStatus">Sandbox ready</span></div>
+        <div id="consoleOutput" class="console-output" role="log" aria-live="polite"><div class="console-line muted-line">Use RUN SANDBOX for isolated code or RUN ON PAGE to execute on the selected website.</div></div>
+        <iframe id="consoleSandbox" class="sandbox-frame" src="sandbox.html" title="Isolated JavaScript runner"></iframe>
       </div>
-      <textarea id="consoleInput" class="console-input" spellcheck="false" aria-label="JavaScript command input" placeholder='console.log("Hello, Server Trace");'>float.show({ title: "ConeUI Floating Panel", text: "Hello! This is a draggable floating window on the webpage.\nMove it by the title bar.", width: 300 });
-console.log("Page float created");</textarea>
-      <div class="console-output-head"><span>OUTPUT</span><span id="consoleRunStatus">Sandbox ready</span></div>
-      <div id="consoleOutput" class="console-output" role="log" aria-live="polite"><div class="console-line muted-line">JavaScript commands run in an isolated sandbox. Use console.log(...) to display results.</div></div>
-      <iframe id="consoleSandbox" class="sandbox-frame" src="sandbox.html" title="Isolated JavaScript runner"></iframe>
+      <div id="commandsMode" class="console-mode hidden">
+        <div class="notice cmd-warning"><strong>Windows Command Prompt (cmd.exe)</strong><p>Commands run locally as your Windows user and may change or delete files, install software, or modify settings. Only run commands you understand. This requires the optional Native Messaging Host; the extension cannot launch cmd.exe by itself.</p>
+          <label class="cmd-confirm"><input id="cmdConfirm" type="checkbox"> I understand this runs commands on my PC.</label>
+        </div>
+        <div class="cmd-toolbar">
+          <button id="cmdConnectButton" class="button primary">CONNECT CMD.EXE</button>
+          <button id="cmdClearButton" class="button">CLS</button>
+          <span id="cmdConnectionState" class="cmd-connection">Not connected</span>
+        </div>
+        <div class="cmd-terminal">
+          <div id="cmdOutput" class="cmd-output" role="log" aria-live="polite"><div class="cmd-line cmd-muted">Server Trace CMD console<br>Type <b>help</b> after connecting.<br>Install instructions are below.</div></div>
+          <div class="cmd-input-row">
+            <label id="cmdPrompt" for="cmdInput">C:\&gt;</label>
+            <input id="cmdInput" type="text" autocomplete="off" spellcheck="false" placeholder="help, dir, ver, whoami…" aria-label="CMD command">
+            <button id="cmdRunButton" class="button small" disabled>RUN</button>
+          </div>
+        </div>
+        <div class="notice cmd-install">
+          <strong>One-time setup</strong>
+          <ol>
+            <li>Open <a href="https://github.com/FeaturedPr0ject/the-console-helper/actions" target="_blank" rel="noreferrer">GitHub Actions</a> and download the <code>ServerTrace-NativeHost-win-x64</code> artifact from the latest successful <b>Build Native CMD Host</b> run.</li>
+            <li>Copy <code>ServerTrace.NativeHost.exe</code> beside <code>install-native-host.bat</code> in the <code>native-host</code> folder.</li>
+            <li>Run <code>install-native-host.bat</code>, enter this extension's ID from <code>chrome://extensions</code>, then reload Server Trace.</li>
+            <li>Return here and press <b>CONNECT CMD.EXE</b>.</li>
+          </ol>
+          <p>Or build it locally with .NET 8 using <code>build-native-host.bat</code>.</p>
+          <a href="https://github.com/FeaturedPr0ject/the-console-helper/tree/main/native-host" target="_blank" rel="noreferrer">View native host files on GitHub</a>
+        </div>
+      </div>
     </section>
     <section id="updateView" class="view hidden">
       <div class="notice update-intro"><strong>Automatic update check</strong><p>Server Trace checks the latest version published in this GitHub repository when the panel opens and whenever you press Check now.</p></div>
