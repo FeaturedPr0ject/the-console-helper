@@ -40,7 +40,7 @@ Chrome extensions cannot start `cmd.exe` directly. The **COMMANDS** sub-tab uses
 
 Alternatively, install the .NET 8 SDK and run `build-native-host.bat` inside the `native-host` folder to build the host locally. Use `uninstall-native-host.bat` to remove the native host registration.
 
-The Native Messaging Host executes commands under the current Windows account. Commands can alter the computer, so only run commands you understand. It runs each submitted line through `cmd.exe`; `cd` and `cd /d` update a working directory that remains active while the host connection stays open. The extension sends commands only after you type them and click Run. The host limits command length, runtime, and captured output; the current directory persists during one connection, while other `cmd.exe` session state (such as environment variable changes) does not.
+The Native Messaging Host executes commands under the current Windows account. Commands can alter the computer, so only run commands you understand. It launches `cmd.exe /d /s /c` for each submitted command; `cd` and `cd /d` update the working directory for the lifetime of the native-host connection. It runs each submitted line through `cmd.exe`; `cd` and `cd /d` update a working directory that remains active while the host connection stays open. The extension sends commands only after you type them and click Run. The host limits command length, runtime, and captured output; the current directory persists during one connection, while other `cmd.exe` session state (such as environment variable changes) does not.
 
 ## Extension logo
 
