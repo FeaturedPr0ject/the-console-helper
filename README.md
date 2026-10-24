@@ -18,6 +18,16 @@ Server Trace is a Chrome Manifest V3 extension that opens as a persistent Side P
 
 Open the **UPDATE** tab in Server Trace to automatically check the GitHub version on panel launch or press **CHECK NOW**. If a new version is found, choose **DOWNLOAD UPDATE ZIP**, extract it, point **Load unpacked** to the updated `extension` folder, or replace the existing files and click **Reload**. The UPDATE tab cannot replace the installed files itself because Chrome restricts self-modification of unpacked extensions.
 
+## Run JavaScript in the live page context
+
+1. Open `chrome://extensions` → **Server Trace → Details**.
+2. Enable **Allow User Scripts**. Chrome 138+ requires this user opt-in for the User Scripts API.
+3. Open the target website, then use **ALLOW SITE** in Server Trace if Chrome asks for site access.
+4. Open the extension's **CONSOLE** tab. Enter, for example, `console.log("Hello from Server Trace"); document.title`.
+5. Click **RUN ON PAGE · F12**. The code runs in the selected page's main JavaScript world. Its native `console.log()` output is visible in that tab's DevTools Console; the returned value, when serializable, is also shown in Server Trace.
+
+**Important:** Page mode is equivalent to running code on the live website. It can read or modify page state, interact with the DOM, and use page APIs. Run only code you understand and trust. The commands you type are not automatically echoed into DevTools as though you typed them there; the code executes in the page context, so its normal Console output appears there.
+
 ## Extension logo
 
 The custom square-corner Server Trace icon is included in PNG sizes 16, 32, 48, and 128 pixels, and the editable SVG source is at `extension/icons/server-trace-logo.svg`. The icon is configured for both the Chrome toolbar and the Extensions page.
