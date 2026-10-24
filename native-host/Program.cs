@@ -136,17 +136,18 @@ internal static class Program
         var cdResult = TryChangeDirectory(command);
         if (cdResult is not null)
         {
+            var result = cdResult.Value;
             return new
             {
                 requestId,
-                ok = cdResult.Ok,
-                stdout = cdResult.Stdout,
-                stderr = cdResult.Stderr,
-                exitCode = cdResult.Ok ? 0 : 1,
+                ok = result.Ok,
+                stdout = result.Stdout,
+                stderr = result.Stderr,
+                exitCode = result.Ok ? 0 : 1,
                 timedOut = false,
                 truncated = false,
                 cwd = _currentDirectory,
-                error = cdResult.Ok ? null : cdResult.Stderr
+                error = result.Ok ? null : result.Stderr
             };
         }
 
