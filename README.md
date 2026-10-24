@@ -1,6 +1,6 @@
 # Server Trace — Chrome Extension
 
-Current source version: **1.4.2**.
+Current source version: **1.5.0**.
 
 ![Server Trace sharp-corner logo](extension/icons/icon128.png)
 
@@ -40,7 +40,7 @@ Chrome extensions cannot start `cmd.exe` directly. The **COMMANDS** sub-tab uses
 
 Alternatively, install the .NET 8 SDK and run `build-native-host.bat` inside the `native-host` folder to build the host locally. Use `uninstall-native-host.bat` to remove the native host registration.
 
-The Native Messaging Host executes commands under the current Windows account. Commands can alter the computer, so only run commands you understand. The extension sends commands only after you type them and click Run. The host limits command length, runtime, and captured output; the current directory persists during one connection, while other `cmd.exe` session state (such as environment variable changes) does not.
+The Native Messaging Host executes commands under the current Windows account. Commands can alter the computer, so only run commands you understand. It runs each submitted line through `cmd.exe`; `cd` and `cd /d` update a working directory that remains active while the host connection stays open. The extension sends commands only after you type them and click Run. The host limits command length, runtime, and captured output; the current directory persists during one connection, while other `cmd.exe` session state (such as environment variable changes) does not.
 
 ## Extension logo
 
@@ -51,7 +51,7 @@ The custom square-corner Server Trace icon is included in PNG sizes 16, 32, 48, 
 - Inspect resource URLs already recorded by the current page and API-like references in its DOM and inline scripts.
 - Filter discovered endpoint candidates and copy sanitized URLs.
 - Export a sanitized JSON report.
-- A **CONSOLE** tab with two modes: **RUN SANDBOX** for isolated testing and **RUN ON PAGE · F12** for user-entered JavaScript in the selected page's `MAIN` world. Native `console.log()` calls from page mode appear in that tab's DevTools Console. Local `.js` files can be run in either mode. Page mode requires Chrome's **Allow User Scripts** switch and site access. Before each page command, the extension registers the text-only `float` helper and its CSS in the selected page. The extension installs a page-context `float.show({ title, text, width })` helper before executing each page command, so `float.show(...)` works in **RUN ON PAGE** and creates a draggable window on the actual webpage. Sandbox mode keeps its separate helper in an isolated context.
+- A **CONSOLE** area with two sub-tabs: **CONSOLE** for JavaScript (sandbox or live page context) and **COMMANDS** for actual Windows `cmd.exe` commands through an optional Native Messaging Host. The command panel includes a connection button, output terminal, current directory, and an explicit safety confirmation. JavaScript page mode requires Chrome's **Allow User Scripts** switch and website access. The page console registers `float.show({ title, text, width })` so it can create a draggable floating window on the actual webpage.
 - Check inline page code for common secret-shaped patterns. The extension reports only the pattern category/source and never displays or exports matched values.
 - An **UPDATE** tab checks the current GitHub manifest on panel launch and lets you download the current source ZIP when a newer version is found.
 - Dark/light styling follows the browser's system color preference.
