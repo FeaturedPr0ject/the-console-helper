@@ -786,3 +786,213 @@ function runPageContext(code, source = "console command") {
     $("#runFilePageButton").disabled = false;
   });
 }
+
+
+const CMD_NATIVE_HOST = "com.coneui.server_trace_cmd";
+let cmdNativePort = null;
+let cmdRequestSequence = 1;
+let cmdPendingRequests = new Map();
+let cmdConnected = false;
+let cmdExpectedDisconnect = false;
+let cmdCurrentDirectory = "C:\\";
+
+function cmdAppend(text, kind = "normal") {
+  const output = $("#cmdOutput");
+  const line = document.createElement("div");
+  line.className = "cmd-line" + (kind === "error" ? " cmd-error" : kind === "command" ? " cmd-command" : kind === "muted" ? " cmd-muted" : kind === "success" ? " cmd-success" : "");
+  line.textContent = String(text);
+  output.append(line);
+  while (output.children.length > 800) output.firstElementChild.remove();
+  output.scrollTop = output.scrollHeight;
+}
+
+function cmdClearOutput() {
+  $("#cmdOutput").replaceChildren();
+}
+
+function cmdUpdatePrompt() {
+  $("#cmdPrompt").textContent = cmdCurrentDirectory + ">";
+  $("#cmdConnectionState").textContent = cmdConnected ? "Connected to cmd.exe" : "Not connected";
+  $("#cmdConnectionState").className = "cmd-connection" + (cmdConnected ? " connected" : "");
+  $("#cmdRunButton").disabled = !(cmdConnected && $("#cmdConfirm").checked);
+}
+
+function cmdSetConnectionError(message) {
+  cmdConnected = false;
+  $("#cmdConnectionState").textContent = "Disconnected";
+  $("#cmdConnectionState").className = "cmd-connection error";
+  $("#cmdRunButton").disabled = true;
+  if (message) cmdAppend(message, "error");
+}
+
+function cmdFailPending(error) {
+  for (const [requestId, item] of cmdPendingRequests.entries()) {
+    clearTimeout(item.timer);
+    item.reject(error);
+    cmdPendingRequests.delete(requestId);
+  }
+}
+
+function cmdEnsureNativePort() {
+  if (cmdNativePort) return cmdNativePort;
+  const port = chrome.runtime.connectNative(CMD_NATIVE_HOST);
+  cmdNativePort = port;
+
+  port.onMessage.addListener((message) => {
+    if (typeof message.cwd === "string" && message.cwd) {
+      cmdCurrentDirectory = message.cwd;
+      cmdUpdatePrompt();
+    }
+    const requestId = String(message.requestId ?? "");
+    const pending = cmdPendingRequests.get(requestId);
+    if (pending) {
+      clearTimeout(pending.timer);
+      cmdPendingRequests.delete(requestId);
+      pending.resolve(message);
+    }
+  });
+
+  port.onDisconnect.addListener(() => {
+    const disconnectMessage = chrome.runtime.lastError?.message || "Native Messaging Host disconnected.";
+    cmdNativePort = null;
+    cmdConnected = false;
+    cmdFailPending(new Error(disconnectMessage));
+    cmdUpdatePrompt();
+    if (!cmdExpectedDisconnect) {
+      cmdSetConnectionError(
+        "Could not connect to the Windows command host. Install native-host\\ServerTrace.NativeHost.exe and run install-native-host.bat, then reload Server Trace."
+      );
+    }
+    cmdExpectedDisconnect = false;
+  });
+  return port;
+}
+
+function cmdRequest(type, extra = {}, timeoutMs = 22000) {
+  return new Promise((resolve, reject) => {
+    let port;
+    try {
+      port = cmdEnsureNativePort();
+    } catch (error) {
+      reject(error);
+      return;
+    }
+    const requestId = String(cmdRequestSequence++);
+    const timer = setTimeout(() => {
+      cmdPendingRequests.delete(requestId);
+      reject(new Error("The command host did not respond before the timeout."));
+    }, timeoutMs);
+    cmdPendingRequests.set(requestId, { resolve, reject, timer });
+    try {
+      port.postMessage({ type, requestId, ...extra });
+    } catch (error) {
+      clearTimeout(timer);
+      cmdPendingRequests.delete(requestId);
+      reject(error);
+    }
+  });
+}
+
+async function cmdConnect() {
+  $("#cmdConnectButton").disabled = true;
+  $("#cmdConnectionState").textContent = "Connecting…";
+  $("#cmdConnectionState").className = "cmd-connection";
+  cmdAppend("Connecting to " + CMD_NATIVE_HOST + "…", "muted");
+  try {
+    const response = await cmdRequest("ping", {}, 6000);
+    if (!response.ok) throw new Error(response.error || "The command host returned an error.");
+    cmdConnected = true;
+    cmdCurrentDirectory = response.cwd || cmdCurrentDirectory;
+    cmdUpdatePrompt();
+    cmdAppend("Connected to Windows cmd.exe. Host version " + response.version + ".", "success");
+    cmdAppend("Type help to list available Windows commands.", "muted");
+  } catch (error) {
+    cmdSetConnectionError(
+      "Native host not found or not allowed: " + String(error?.message || error) +
+      ". Follow the setup steps below and reload the extension."
+    );
+  } finally {
+    $("#cmdConnectButton").disabled = false;
+  }
+}
+
+async function cmdRunCurrent() {
+  const command = $("#cmdInput").value.trim();
+  if (!command) return;
+  if (!$("#cmdConfirm").checked) {
+    cmdAppend("Tick the confirmation box first. Commands run locally with your Windows account permissions.", "error");
+    return;
+  }
+
+  if (/^(cls|clear)$/i.test(command)) {
+    cmdClearOutput();
+    $("#cmdInput").value = "";
+    return;
+  }
+  if (/^exit$/i.test(command)) {
+    cmdAppend(cmdCurrentDirectory + "> exit", "command");
+    if (cmdNativePort) {
+      cmdExpectedDisconnect = true;
+      cmdNativePort.disconnect();
+      cmdNativePort = null;
+    }
+    cmdConnected = false;
+    cmdUpdatePrompt();
+    cmdAppend("Disconnected from native command host. Windows is unchanged.", "muted");
+    $("#cmdInput").value = "";
+    return;
+  }
+  if (!cmdConnected || !cmdNativePort) {
+    cmdAppend("Not connected. Press CONNECT CMD.EXE first.", "error");
+    return;
+  }
+
+  $("#cmdRunButton").disabled = true;
+  $("#cmdInput").disabled = true;
+  cmdAppend(cmdCurrentDirectory + "> " + command, "command");
+  $("#cmdInput").value = "";
+  try {
+    const response = await cmdRequest("run", { command }, 22000);
+    if (typeof response.cwd === "string" && response.cwd) {
+      cmdCurrentDirectory = response.cwd;
+      cmdUpdatePrompt();
+    }
+    if (response.stdout) cmdAppend(response.stdout.replace(/\r?\n$/, ""));
+    if (response.stderr) cmdAppend(response.stderr.replace(/\r?\n$/, ""), "error");
+    if (response.timedOut) cmdAppend("Command timed out and was stopped.", "error");
+    if (response.truncated) cmdAppend("Output was truncated by the safety limit.", "muted");
+    if (response.error) cmdAppend(response.error, "error");
+    if (!response.stdout && !response.stderr && !response.error && !response.timedOut) {
+      cmdAppend("(no output; exit code " + String(response.exitCode ?? 0) + ")", "muted");
+    } else if (response.exitCode !== 0 && response.exitCode !== undefined) {
+      cmdAppend("Exit code: " + response.exitCode, "muted");
+    }
+  } catch (error) {
+    cmdAppend("Command failed: " + String(error?.message || error), "error");
+    cmdConnected = false;
+  } finally {
+    $("#cmdInput").disabled = false;
+    cmdUpdatePrompt();
+    $("#cmdInput").focus();
+  }
+}
+
+$("#cmdConnectButton").addEventListener("click", cmdConnect);
+$("#cmdRunButton").addEventListener("click", cmdRunCurrent);
+$("#cmdClearButton").addEventListener("click", cmdClearOutput);
+$("#cmdConfirm").addEventListener("change", cmdUpdatePrompt);
+$("#cmdInput").addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    cmdRunCurrent();
+  }
+});
+document.querySelectorAll("[data-console-mode]").forEach((button) => {
+  button.addEventListener("click", () => {
+    document.querySelectorAll("[data-console-mode]").forEach((other) => other.classList.toggle("active", other === button));
+    document.querySelectorAll(".console-mode").forEach((view) => view.classList.add("hidden"));
+    $("#" + (button.dataset.consoleMode === "commands" ? "commandsMode" : "javascriptMode")).classList.remove("hidden");
+    if (button.dataset.consoleMode === "commands") $("#cmdInput").focus();
+  });
+});
+cmdUpdatePrompt();
