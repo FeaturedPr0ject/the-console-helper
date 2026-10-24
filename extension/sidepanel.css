@@ -101,3 +101,45 @@ main{padding:11px}.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1f
   .console-toolbar{grid-template-columns:repeat(2,minmax(0,1fr))}
   .console-toolbar .button{font-size:9px}
 }
+
+
+.console-modes{display:grid;grid-template-columns:1fr 1fr;gap:0;margin:0 0 8px;border:1px solid var(--border)}
+.console-mode-tab{min-height:28px;border:0;border-right:1px solid var(--border);background:transparent;color:var(--muted);font:10px/1.2 "Segoe UI",Arial,sans-serif;cursor:pointer}
+.console-mode-tab:last-child{border-right:0}
+.console-mode-tab.active{background:#30343c;color:var(--text);box-shadow:inset 0 -2px var(--accent)}
+.console-mode{min-width:0}
+.cmd-warning{font-size:10px;padding:8px;margin-bottom:7px}
+.cmd-confirm{display:flex;gap:7px;align-items:flex-start;margin-top:8px;color:var(--text);font-size:10px}
+.cmd-confirm input{margin:2px 0 0;accent-color:#879ab4;flex-shrink:0}
+.cmd-toolbar{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:7px 0}
+.cmd-toolbar .button{font-size:9px;padding:5px 7px}
+.cmd-toolbar .button.primary{flex:0 1 auto;min-width:125px}
+.cmd-connection{margin-left:auto;font:9px/1.4 Consolas,monospace;color:var(--muted);overflow-wrap:anywhere}
+.cmd-connection.connected{color:var(--green)}
+.cmd-connection.error{color:#efaaaa}
+.cmd-terminal{border:1px solid #424955;background:#101216;color:#e8eaf0;min-width:0}
+.cmd-output{height:260px;max-height:38vh;overflow:auto;padding:8px;font:10px/1.55 Consolas,"Courier New",monospace;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
+.cmd-line{margin:0 0 3px;white-space:pre-wrap;overflow-wrap:anywhere}
+.cmd-line.cmd-command{color:#95bbef}
+.cmd-line.cmd-error{color:#ffaaaa}
+.cmd-line.cmd-muted{color:#939dad}
+.cmd-line.cmd-success{color:#9ed9b1}
+.cmd-input-row{display:flex;align-items:center;gap:6px;border-top:1px solid #39404a;padding:6px;background:#1e2229}
+.cmd-input-row label{color:#9ed9b1;font:10px/1.4 Consolas,monospace;white-space:nowrap;max-width:42%;overflow:hidden;text-overflow:ellipsis}
+.cmd-input-row input{min-width:0;flex:1;border:0;border-bottom:1px solid #46505d;outline:0;background:transparent;color:#f0f3f8;font:10px/1.5 Consolas,monospace;padding:5px 2px}
+.cmd-input-row .button{flex:0 0 auto;font-size:9px;padding:5px 9px}
+.cmd-install{font-size:10px;padding:8px;margin-top:8px}
+.cmd-install ol{margin:7px 0;padding-left:19px}
+.cmd-install li{margin:4px 0;overflow-wrap:anywhere}
+.cmd-install code{font:9px Consolas,monospace;color:var(--accent);overflow-wrap:anywhere}
+.cmd-install a{color:var(--accent);text-decoration:underline;text-underline-offset:2px}
+@media(prefers-color-scheme:light){
+ .console-mode-tab.active{background:#e2e5eb}
+ .cmd-terminal{background:#fbfcfd;color:#232a32;border-color:#c3cad4}
+ .cmd-input-row{background:#e9edf3;border-color:#d3d9e3}
+ .cmd-input-row input{color:#232a32}
+ .cmd-line.cmd-command{color:#225eae}
+ .cmd-line.cmd-error{color:#a51e27}
+ .cmd-line.cmd-muted{color:#666d78}
+ .cmd-line.cmd-success{color:#277445}
+}
