@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Server Trace — API Inspector",
-  "version": "1.4.2",
-  "description": "A Chrome side panel with sandboxed and page-context JavaScript consoles, API inspection, in-page floats, and update checking.",
+  "version": "1.5.0",
+  "description": "A Chrome side panel with JavaScript page console, in-page floats, API inspection, GitHub updates, and optional Windows CMD integration.",
   "permissions": [
     "tabs",
     "scripting",
     "sidePanel",
-    "userScripts"
+    "userScripts",
+    "nativeMessaging"
   ],
   "background": {
     "service_worker": "service-worker.js"
