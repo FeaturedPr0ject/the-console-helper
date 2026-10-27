@@ -46,7 +46,7 @@ The custom square-corner Server Trace icon is included in PNG sizes 16, 32, 48, 
 
 - `tabs`: reads the current tab's URL/title so the panel knows which site you selected.
 - `scripting`: runs the scanner and explicit in-page float helper after site access has been granted.
-- `host_permissions` for `raw.githubusercontent.com`: used to check the latest manifest version in the UPDATE tab.
+- `host_permissions` for `raw.githubusercontent.com`: allows the UPDATE tab to check the latest GitHub manifest.
 - `userScripts`: enables an explicit **RUN ON PAGE** mode for user-entered code in the selected page's JavaScript world. Chrome also requires **Allow User Scripts** to be enabled in the extension's Details settings.
 - `sidePanel`: opens the extension's dedicated panel.
 - Optional host access: Chrome asks for permission to the individual site's origin only when you press Scan; it does not receive all-site access by default.
