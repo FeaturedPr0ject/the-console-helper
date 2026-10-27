@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Server Trace Legacy</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <div class="brand"><span class="mark">ST</span><div><strong>SERVER TRACE</strong><small>LEGACY · CHROME 109</small></div></div>
+    <p class="intro">Windows 7 compatibility edition</p>
+  </header>
+  <nav class="tabs" aria-label="Views">
+    <button class="active" data-view="console">CONSOLE</button>
+    <button data-view="about">ABOUT</button>
+  </nav>
+  <main>
+    <section id="consoleView" class="view">
+      <div class="notice">Sandbox mode runs code in an isolated context. It cannot access the active website DOM, cookies, or session.</div>
+      <label for="code">JavaScript input</label>
+      <textarea id="code" spellcheck="false">console.log("Hello from Server Trace Legacy");</textarea>
+      <div class="actions">
+        <button id="runButton" class="primary">RUN SANDBOX</button>
+        <button id="clearButton">CLEAR</button>
+      </div>
+      <div class="output-head"><span>OUTPUT</span><span id="runStatus">Ready</span></div>
+      <pre id="output" role="log" aria-live="polite">The sandbox runner is not yet connected in this compatibility scaffold.</pre>
+      <iframe id="sandbox" src="sandbox.html" title="Isolated JavaScript sandbox"></iframe>
+    </section>
+    <section id="aboutView" class="view hidden">
+      <h2>Compatibility edition</h2>
+      <p>Designed for Windows 7 with Chrome 109. This legacy popup intentionally omits Side Panel and page-main-world execution APIs.</p>
+      <p class="warning">This package is a scaffold, not a finished extension. Do not rely on scanning or JavaScript execution until those features have been implemented and tested.</p>
+    </section>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>
