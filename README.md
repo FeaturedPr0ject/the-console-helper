@@ -18,6 +18,10 @@ Server Trace is a Chrome Manifest V3 extension that opens as a persistent Side P
 
 Open the **UPDATE** tab in Server Trace to automatically check the GitHub version on panel launch or press **CHECK NOW**. If a new version is found, choose **DOWNLOAD UPDATE ZIP**, extract it, point **Load unpacked** to the updated `extension` folder, or replace the existing files and click **Reload**. The UPDATE tab cannot replace the installed files itself because Chrome restricts self-modification of unpacked extensions.
 
+## Windows 7 / Chrome 109 edition
+
+A separate legacy popup edition is available in [`windows-7-chrome-109/`](windows-7-chrome-109/). To load it, use **Load unpacked** and select that folder instead of `extension/`. It provides a basic active-tab API scan and an isolated JavaScript sandbox; it intentionally does not execute typed JavaScript in the website's main world. See that folder's README for its limitations.
+
 ## Run JavaScript in the live page context
 
 1. Open `chrome://extensions` → **Server Trace → Details**.
