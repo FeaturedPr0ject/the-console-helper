@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Server Trace — Windows 7 / Chrome 109",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Legacy popup edition with an isolated JavaScript sandbox and active-tab API scan.",
   "minimum_chrome_version": "109",
   "action": {
