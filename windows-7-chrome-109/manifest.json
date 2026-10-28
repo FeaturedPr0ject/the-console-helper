@@ -1,11 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "Server Trace — Windows 7 / Chrome 109 (Compatibility Edition)",
-  "version": "0.1.0",
-  "description": "Legacy compatibility edition design for Windows 7 systems running Chrome 109.",
+  "name": "Server Trace — Windows 7 / Chrome 109",
+  "version": "0.2.0",
+  "description": "Legacy popup edition with an isolated JavaScript sandbox and active-tab API scan.",
   "minimum_chrome_version": "109",
   "action": {
-    "default_title": "Server Trace Legacy",
+    "default_title": "Open Server Trace Legacy",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
@@ -18,7 +18,10 @@
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": [],
+  "permissions": [
+    "activeTab",
+    "scripting"
+  ],
   "background": {
     "service_worker": "service-worker.js"
   },
