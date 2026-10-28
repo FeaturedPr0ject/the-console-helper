@@ -1,28 +1,37 @@
 # Server Trace — Windows 7 / Chrome 109
 
-This folder is a separate compatibility edition for legacy Windows 7 systems using Chrome 109. It does not modify the main `extension/` package.
+This is a separate compatibility edition for Windows 7 systems running Chrome 109. It does not modify the modern `extension/` package.
 
-## Compatibility strategy
+## Install
 
-Chrome 109 does not provide the `chrome.sidePanel` or `chrome.userScripts` APIs used by the modern edition. This legacy edition therefore must use a Manifest V3 browser-action popup and a sandbox-only JavaScript console instead of the Side Panel and page-main-world execution.
+1. Download the repository ZIP and extract it.
+2. Open `chrome://extensions` in Chrome 109.
+3. Enable **Developer mode**.
+4. Click **Load unpacked** and select the `windows-7-chrome-109` folder.
+5. Click the Server Trace Legacy toolbar icon to open its popup.
 
-## Planned package layout
+## Features in this edition
 
-- `manifest.json` — legacy manifest with no `sidePanel` or `userScripts` permission, and `minimum_chrome_version: "109"`.
-- `popup.html`, `popup.css`, `popup.js` — compact popup UI compatible with Chrome 109.
-- `sandbox.html`, `sandbox.js` — isolated JavaScript runner. The sandbox must not be presented as able to access the current page DOM or session.
-- `service-worker.js` — minimal MV3 service worker, using APIs available in Chrome 109 only.
+- **API Scan**: click **SCAN CURRENT TAB** to inspect resource timing entries and endpoint-like references in the active webpage's DOM and inline scripts. The extension uses the `activeTab` permission and does not request permanent access to all websites.
+- **JavaScript Console**: runs code in the extension's isolated sandbox and displays `console.log`, `console.warn`, `console.error`, and other captured console output. Use the provided `state` object to retain values between runs.
+- **Privacy boundary**: the sandbox cannot access the active page's DOM, cookies, session, or authorization state. Network APIs are blocked in the sandbox. Page-context execution from the modern edition is not included.
+- **Filter**: filter discovered candidates by URL or type.
 
 ## Feature differences
 
 | Feature | Modern edition | Windows 7 / Chrome 109 edition |
 | --- | --- | --- |
-| Side Panel | Yes | No; use popup |
-| Isolated JavaScript sandbox | Yes | Intended |
-| Execute typed code in page MAIN world | Requires `userScripts` | Not included |
-| Endpoint scan | Available in modern edition | Needs a Chrome 109-compatible implementation and explicit site permission |
-| Update checker | Available | Can be added after legacy package is tested |
+| Side Panel | Yes | Popup |
+| API endpoint inspection | Yes | Basic active-tab scanner |
+| Isolated JavaScript sandbox | Yes | Yes |
+| Execute typed code in the website's main JavaScript world | Requires newer user-script support | Not included |
+| Update checker | Yes | Not included yet |
 
-## Important
+## Limitations
 
-This README documents the compatibility target and package plan; this folder is not yet a complete, tested installable extension. Do not load it as an extension until all files in the planned layout are implemented and checked on Chrome 109. Chrome 109 is the final Chrome release for Windows 7, and older Chrome versions have known security risks.
+- Internal browser pages such as `chrome://extensions` and Chrome Web Store pages cannot be scanned.
+- Results depend on URLs visible in resource timing, page DOM, or inline scripts. Server-only or dynamically generated endpoints may not be found.
+- The sandbox is intentionally isolated from the live page. It is not a replacement for DevTools Console when interacting with the website.
+- The package targets Chrome 109 APIs, but it has not been tested on every Windows 7 configuration. Chrome 109 is the final Chrome release that supports Windows 7; Google documents this in its [Chrome support timeline](https://support.google.com/chrome/a/answer/7100626?hl=en).
+
+Use only on websites and systems you own or have permission to inspect.
