@@ -67,6 +67,7 @@ window.addEventListener("message", (event) => {
     return;
   }
   if (message.runId !== activeRunId) return;
+  if (message.type === "CLEAR") output.textContent = "";
   if (message.type === "LOG") appendOutput(message.text, message.level);
   if (message.type === "RESULT") appendOutput("Result: " + message.text, "result");
   if (message.type === "ERROR") appendOutput(message.message || "Execution failed.", "error");
